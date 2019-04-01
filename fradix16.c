@@ -138,14 +138,15 @@ double testOne() {
 	return (stop.tv_sec - start.tv_sec) * 1e3 + (stop.tv_nsec - start.tv_nsec) / 1e6;    // in milliseconds
 }
 
-double mean(double *a, int n) {
-	double sum = 0;
+double min(double *a, int n) {
+	double min = 100000;
 	for (int i = 0; i < n; ++i) {
-		sum += a[i];
+		if (a[i] < min) {
+			min = a[i];
+		}
 	}
-	return sum / n;
+	return min;
 }
-
 
 int main()
 {
@@ -159,9 +160,9 @@ int main()
 	for (int i = 0; i < testN; ++i) {
 		result[i] = testOne();
 	}
-	double m = mean(result, testN);
+	double m = min(result, testN);
 #else
 	double m = testOne();
 #endif
-	printf("radix time mean %f ms\n", m);
+	printf("radix time min %f ms\n", m);
 }
