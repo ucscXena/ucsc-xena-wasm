@@ -73,7 +73,8 @@ void radixSort(uint *vals, int n, int *indicies) {
 	computeHisto(vals, n);
 
 	for (int i = n - 1; i >= 0; i--) {
-		output[offset0[part0(flop(vals[i]))]-- - 1] = i;
+		int ii = indicies[i];
+		output[offset0[part0(flop(vals[ii]))]-- - 1] = ii;
 	}
 
 	for (int i = n - 1; i >= 0; i--) {
