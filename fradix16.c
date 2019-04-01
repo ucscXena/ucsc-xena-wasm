@@ -22,7 +22,7 @@ void printi(uint arr[], int n) {
 }
 
 // plan
-// - use 11 bit shifts, in 3 passes
+// - use 16 bit shifts, in 2 passes
 // - compute all histograms in one pass
 // - call repeatedly for additional keys, vs. building it into the API
 //    - allow reuse of allocated buffers
@@ -32,16 +32,14 @@ void printi(uint arr[], int n) {
 //    can we do this as we go? if not, check on the way in, during histogram.
 
 
-#define offsetSize (1 << 11)
+#define offsetSize (1 << 16)
 int *offset0;
 int *offset1;
-int *offset2;
 
 #define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000))
-#define mask ((1 << 11) - 1)
+#define mask ((1 << 16) - 1)
 #define part0(x) (mask & (x))
-#define part1(x) (mask & ((x) >> 11))
-#define part2(x) (mask & ((x) >> 22))
+#define part1(x) (mask & ((x) >> 16))
 
 void zero(int *a, int n) {
 	memset(a, 0, n * sizeof(int));
@@ -50,17 +48,14 @@ void zero(int *a, int n) {
 void computeHisto(uint *vals, int n) {
 	zero(offset0, offsetSize);
 	zero(offset1, offsetSize);
-	zero(offset2, offsetSize);
 	for (int i = 0; i < n; ++i) {
 		uint flopped = flop(vals[i]);
 		offset0[part0(flopped)]++;
 		offset1[part1(flopped)]++;
-		offset2[part2(flopped)]++;
 	}
 	for (int i = 1; i < offsetSize; i++) {
 		offset0[i] += offset0[i - 1];
 		offset1[i] += offset1[i - 1];
-		offset2[i] += offset2[i - 1];
 	}
 }
 
@@ -72,7 +67,7 @@ int spy(int x) {
 // Sorting indicies is quite a bit slower than direct sorting. Is there
 // any way to combine the two? Maybe merge the indicies into a 64 bit value,
 // and use 64 bit store/loads?
-int *radixSort(uint *vals, int n, int *indicies) {
+void radixSort(uint *vals, int n, int *indicies) {
 	int *output = malloc(n * sizeof(int));
 
 	computeHisto(vals, n);
@@ -84,11 +79,7 @@ int *radixSort(uint *vals, int n, int *indicies) {
 	for (int i = n - 1; i >= 0; i--) {
 		indicies[offset1[part1(flop(vals[output[i]]))]-- - 1] = output[i];
 	}
-
-	for (int i = n - 1; i >= 0; i--) {
-		output[offset2[part2(flop(vals[indicies[i]]))]-- - 1] = indicies[i];
-	}
-	return output;
+	free(output);
 }
 
 #define N 1300000
@@ -152,17 +143,23 @@ double mean(double *a, int n) {
 	}
 	return sum / n;
 }
+
+
 int main()
 {
+
 	offset0 = malloc(offsetSize * sizeof(int));
 	offset1 = malloc(offsetSize * sizeof(int));
-	offset2 = malloc(offsetSize * sizeof(int));
 
+#if 1
 	int testN = 100;
 	double *result = malloc(testN * sizeof(double));
 	for (int i = 0; i < testN; ++i) {
 		result[i] = testOne();
 	}
 	double m = mean(result, testN);
+#else
+	double m = testOne();
+#endif
 	printf("radix time mean %f ms\n", m);
 }
