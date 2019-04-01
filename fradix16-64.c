@@ -118,7 +118,8 @@ void radixSort(uint *vals, int n, int *indicies) {
 
 #define N 1300000
 
-float *getarr() {
+// some unique values
+float *uniqArr() {
 	float *arr = malloc(N * sizeof(float));
 	for (int i = 0; i < N; ++i) {
 		arr[i] = ((float)(rand() - RAND_MAX / 2)) / (RAND_MAX / 10);
@@ -126,6 +127,7 @@ float *getarr() {
 	return arr;
 }
 
+// initial indicies to be sorted
 int *getIndicies() {
 	int *arr = malloc(N * sizeof(int));
 	for (int i = 0; i < N; ++i) {
@@ -142,33 +144,53 @@ float *mapIndicies(float *vals, uint *indicies, int n) {
 	return out;
 }
 
-int *intlarr() {
-	int *arr = malloc(N * sizeof(int));
-	int i;
-	for (i = 0; i < N; i += 1) {
+// array with cardinality 3
+float *threeValArr() {
+	float *arr = malloc(N * sizeof(float));
+	for (int i = 0; i < N; i += 1) {
 		arr[i] = 2 - i * 3 / N;
+	}
+	return arr;
+}
+
+// array with cardinality 6
+float *sixValArr() {
+	float *arr = malloc(N * sizeof(float));
+	for (int i = 0; i < N; i += 1) {
+		arr[i] = i * 6 / N;
 	}
 	return arr;
 }
 
 double testOne() {
 	struct timespec start, stop;
-	float *floats = getarr();
+	float *a0 = uniqArr();
+	float *a1 = sixValArr();
+	float *a2 = threeValArr();
 	int *indicies = getIndicies();
 
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
-	radixSort((uint *)floats, N, indicies);
+	radixSort((uint *)a0, N, indicies);
+	radixSort((uint *)a1, N, indicies);
+	radixSort((uint *)a2, N, indicies);
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &stop);
 #if 0
-	float *col = mapIndicies(floats, i, N);
-//	print(floats, 10);
-	print(col, 10);
-	print(col + N - 10, 10);
+	float *col;
+	col = mapIndicies(a0, indicies, N);
+	print(col, N);
+	free(col);
+	col = mapIndicies(a1, indicies, N);
+	print(col, N);
+	free(col);
+	col = mapIndicies(a2, indicies, N);
+	print(col, N);
+	free(col);
 #endif
-#if 1
-	float last = floats[indicies[0]];
+#if 0
+	// XXX need a better test here. Maybe compare to quicksort.
+	float last = a0[indicies[0]];
 	for (int i = 1; i < N; ++i) {
-		float next = floats[indicies[i]];
+		float next = a0[indicies[i]];
 		if (next < last) {
 			printf("wrong sort: %g before %g\n", last, next);
 			break;
@@ -176,7 +198,9 @@ double testOne() {
 		last = next;
 	}
 #endif
-	free(floats);
+	free(a0);
+	free(a1);
+	free(a2);
 	free(indicies);
 	return (stop.tv_sec - start.tv_sec) * 1e3 + (stop.tv_nsec - start.tv_nsec) / 1e6;    // in milliseconds
 }
