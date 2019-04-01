@@ -66,7 +66,8 @@ int spy(int x) {
 
 // Sorting indicies is quite a bit slower than direct sorting. Is there
 // any way to combine the two? Maybe merge the indicies into a 64 bit value,
-// and use 64 bit store/loads?
+// and use 64 bit store/loads? See fradix16-64.
+
 void radixSort(uint *vals, int n, int *indicies) {
 	int *output = malloc(n * sizeof(int));
 
