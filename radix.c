@@ -345,6 +345,37 @@ int *mapIndicies(int *vals, int *indicies, int n) {
 	return out;
 }
 
+double min(double *a, int n) {
+	double min = 100000;
+	for (int i = 0; i < n; ++i) {
+		if (a[i] < min) {
+			min = a[i];
+		}
+	}
+	return min;
+}
+
+double testOne() {
+	struct timespec start, stop;
+
+	int *a4 = revarr();
+	int *a5 = intlarr2();
+	int *a6 = intlarr();
+	int *i = getIndicies();
+	int **list = malloc(3 * sizeof(int*));
+	list[0] = a4;
+	list[1] = a5;
+	list[2] = a6;
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+	radixSortMultiple32(list, 3, N, i);
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &stop);
+	free(a4);
+	free(a5);
+	free(a6);
+	free(list);
+	return (stop.tv_sec - start.tv_sec) * 1e3 + (stop.tv_nsec - start.tv_nsec) / 1e6;    // in milliseconds
+}
+
 // Driver program to test above functions 
 int main() 
 { 
@@ -392,8 +423,8 @@ int main()
 		print(i + N - 10, 10);
 	}
 
-	{
-		count32 = malloc(N * sizeof(int));
+	count32 = malloc(N * sizeof(int));
+	if (0) {
 		int *a4 = revarr();
 		int *a5 = intlarr2();
 		int *a6 = intlarr();
@@ -424,17 +455,17 @@ int main()
 #endif
 	}
 
-#if 0
-	print(a1, N);
-	print(a2, N);
-	print(a3, N);
+#if 1
+	int testN = 100;
+	double *results = malloc(testN * sizeof(double));
+	for (int i = 0; i < testN; ++i) {
+		results[i] = testOne();
+	}
+	double m = min(results, testN);
 #else
-	print(a1, 1);
-	print(a1 + N - 1, 1);
-	print(a2, 1);
-	print(a2 + N - 1, 1);
-	print(a3, 1);
-	print(a3 + N - 1, 1);
+	double m = testOne();
 #endif
+	printf("radix time min %f ms\n", m);
+
 	return 0; 
 } 
