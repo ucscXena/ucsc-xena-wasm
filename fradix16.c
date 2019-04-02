@@ -1,25 +1,8 @@
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <math.h>
-
-// A utility function to print an array
-void print(float arr[], int n) {
-	int i;
-	for (i = 0; i < n; i++)  {
-		printf("%g ", arr[i]);
-	}
-	printf("\n");
-}
-
-void printi(uint arr[], int n) {
-	for (int i = 0; i < n; i++)  {
-		printf("%d ", arr[i]);
-	}
-	printf("\n");
-}
+#include <stdint.h> // uint32_t
+#include <stdlib.h> // malloc
+#include <string.h> // memset
+#include "fradix16.h"
 
 // plan
 // - use 16 bit shifts, in 2 passes
@@ -33,23 +16,23 @@ void printi(uint arr[], int n) {
 
 
 #define offsetSize (1 << 16)
-int *offset0;
-int *offset1;
+static int *offset0;
+static int *offset1;
 
 #define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000))
 #define mask ((1 << 16) - 1)
 #define part0(x) (mask & (x))
 #define part1(x) (mask & ((x) >> 16))
 
-void zero(int *a, int n) {
+static void zero(int *a, int n) {
 	memset(a, 0, n * sizeof(int));
 }
 
-void computeHisto(uint *vals, int n) {
+static void computeHisto(uint32_t *vals, int n) {
 	zero(offset0, offsetSize);
 	zero(offset1, offsetSize);
 	for (int i = 0; i < n; ++i) {
-		uint flopped = flop(vals[i]);
+		uint32_t flopped = flop(vals[i]);
 		offset0[part0(flopped)]++;
 		offset1[part1(flopped)]++;
 	}
@@ -59,16 +42,11 @@ void computeHisto(uint *vals, int n) {
 	}
 }
 
-int spy(int x) {
-	printf("idx %d\n", x);
-	return x;
-}
-
 // Sorting indicies is quite a bit slower than direct sorting. Is there
 // any way to combine the two? Maybe merge the indicies into a 64 bit value,
 // and use 64 bit store/loads? See fradix16-64.
 
-void radixSort(uint *vals, int n, int *indicies) {
+void fradixSort16(uint32_t *vals, int n, int *indicies) {
 	int *output = malloc(n * sizeof(int));
 
 	computeHisto(vals, n);
@@ -84,85 +62,7 @@ void radixSort(uint *vals, int n, int *indicies) {
 	free(output);
 }
 
-#define N 1300000
-
-float *getarr() {
-	float *arr = malloc(N * sizeof(float));
-	for (int i = 0; i < N; ++i) {
-		arr[i] = ((float)(rand() - RAND_MAX / 2)) / (RAND_MAX / 10);
-	}
-	return arr;
-}
-
-int *getIndicies() {
-	int *arr = malloc(N * sizeof(int));
-	for (int i = 0; i < N; ++i) {
-		arr[i] = i;
-	}
-	return arr;
-}
-
-float *mapIndicies(float *vals, uint *indicies, int n) {
-	float *out = malloc(n * sizeof(float));
-	for (int i = 0; i < n; ++i) {
-		out[i] = vals[indicies[i]];
-	}
-	return out;
-}
-
-int *intlarr() {
-	int *arr = malloc(N * sizeof(int));
-	int i;
-	for (i = 0; i < N; i += 1) {
-		arr[i] = 2 - i * 3 / N;
-	}
-	return arr;
-}
-
-double testOne() {
-	struct timespec start, stop;
-	float *floats = getarr();
-	int *i = getIndicies();
-
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
-	radixSort((uint *)floats, N, i);
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &stop);
-#if 0
-	float *col = mapIndicies(floats, i, N);
-//	print(floats, 10);
-	print(col, 10);
-	print(col + N - 10, 10);
-#endif
-	free(floats);
-	free(i);
-	return (stop.tv_sec - start.tv_sec) * 1e3 + (stop.tv_nsec - start.tv_nsec) / 1e6;    // in milliseconds
-}
-
-double min(double *a, int n) {
-	double min = 100000;
-	for (int i = 0; i < n; ++i) {
-		if (a[i] < min) {
-			min = a[i];
-		}
-	}
-	return min;
-}
-
-int main()
-{
-
+void fradixSort16_init() {
 	offset0 = malloc(offsetSize * sizeof(int));
 	offset1 = malloc(offsetSize * sizeof(int));
-
-#if 1
-	int testN = 100;
-	double *result = malloc(testN * sizeof(double));
-	for (int i = 0; i < testN; ++i) {
-		result[i] = testOne();
-	}
-	double m = min(result, testN);
-#else
-	double m = testOne();
-#endif
-	printf("radix time min %f ms\n", m);
 }
