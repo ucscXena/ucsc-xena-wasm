@@ -31,7 +31,6 @@ void printi(uint arr[], int n) {
 // - try reporting if the data is fully sorted
 //    can we do this as we go? if not, check on the way in, during histogram.
 
-
 #define offsetSize (1 << 16)
 int *offset0;
 int *offset1;
@@ -94,11 +93,10 @@ int spy(int x) {
 	printf("i %d\n", x);
 	return x;
 }
-void radixSort(uint *vals, int n, int *indicies) {
+
+void radixSort(uint *vals, int n, int *indicies, ulong *scratch) {
 
 	computeHisto(vals, n);
-
-	ulong *output = malloc(n * sizeof(ulong));
 
 	for (int i = n - 1; i >= 0; i--) {
 		int ii = indicies[i];
@@ -107,13 +105,14 @@ void radixSort(uint *vals, int n, int *indicies) {
 		// long word read/write, and avoid a 2nd array lookup, later.
 		// XXX we could store the flopped value, to avoid flopping it again.
 		// Probably this will not be measurable, since flopping is very fast.
-		output[offset0[part0(flop(v))]-- - 1] = ((ulong)ii << 32) | v;
+		// Weirdly, it seems to be slower if we store the flop. Maybe due to
+		// additional register load, or something?
+		scratch[offset0[part0(flop(v))]-- - 1] = ((ulong)ii << 32) | v;
 	}
 
 	for (int i = n - 1; i >= 0; i--) {
-		indicies[offset1[part1(flop(output[i] & 0xFFFFFFFF))]-- - 1] = output[i] >> 32;
+		indicies[offset1[part1(flop(scratch[i] & 0xFFFFFFFF))]-- - 1] = scratch[i] >> 32;
 	}
-	free(output);
 }
 
 #define N 1300000
@@ -168,11 +167,14 @@ double testOne() {
 	float *a1 = sixValArr();
 	float *a2 = threeValArr();
 	int *indicies = getIndicies();
+	ulong *scratch = malloc(N * sizeof(ulong));
+
 
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
-	radixSort((uint *)a0, N, indicies);
-	radixSort((uint *)a1, N, indicies);
-	radixSort((uint *)a2, N, indicies);
+	radixSort((uint *)a0, N, indicies, scratch);
+	radixSort((uint *)a1, N, indicies, scratch);
+	radixSort((uint *)a2, N, indicies, scratch);
+	free(scratch);
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &stop);
 #if 0
 	float *col;
@@ -214,7 +216,6 @@ double min(double *a, int n) {
 	}
 	return min;
 }
-
 
 int main()
 {
