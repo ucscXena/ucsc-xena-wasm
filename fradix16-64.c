@@ -89,6 +89,12 @@ void fradixSort16_64(uint32_t *vals, int n, int *indicies, uint64_t *scratch) {
 	}
 }
 
+void fradixSortL16_64(uint32_t **valsList, int m, int n, int *indicies, uint64_t *scratch) {
+	while (m--) {
+		fradixSort16_64(*valsList--, n, indicies, scratch);
+	}
+}
+
 // set up working space.
 void fradixSort16_64_init() {
 	offset0 = malloc(offsetSize * sizeof(int));
