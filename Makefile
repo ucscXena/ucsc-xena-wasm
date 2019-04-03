@@ -11,8 +11,13 @@ bench: $(bench_objects)
 CCALL=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue"]'
 EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_malloc","_free"]'
 MEMOPTS=-s ALLOW_MEMORY_GROWTH=1
+
 sort.js: fradix16-64.o
 	$(CC) $(CFLAGS) -o $@ $(CCALL) $(EXPORT) $(MEMOPTS) $^
+
+bench.html: bench
+	cp bench bench.bc
+	$(CC) $(CFLAGS) bench.bc $(MEMOPTS) -o bench.html
 
 clean:
 	rm -f bench $(bench_objects)
