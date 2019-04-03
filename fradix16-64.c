@@ -18,7 +18,30 @@
 static int *offset0;
 static int *offset1;
 
-#define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000))
+// nan, +inf, -inf
+// s111 1111 1xxx xxxx xxxx xxxx xxxx xxxx
+// +inf s is 0, high x is 0
+// -inf s is 1, high x is 0
+// nan: s is 0, high x is 1
+// All other non-zero x are also nan, but 7FC is the canonical one we
+// will see in the data.
+
+// In order to sort negatives correctly, we have to 1) swap the sign bit
+// 2) swap all the other bits if the number is negative. Additionally, since
+// nan is bitwise above +inf, and we want to sort it as -inf, explictly map
+// it to the flop of -inf.
+#define flop(x) ((x) == 0x7FC00000 ? 0x7FFFFF : ((x) ^ (-((x) >> 31) | 0x80000000)))
+
+// w/o the nan remapping, use this
+//#define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000))
+
+#if 0
+uint32_t flop(uint32_t x) {
+	return x == 0x7FC00000 ? 0x7FFFFF :
+		(x ^ (-(x >> 31) | 0x80000000));
+}
+#endif
+
 #define mask ((1 << 16) - 1)
 #define part0(x) (mask & (x))
 #define part1(x) (mask & ((x) >> 16))
@@ -67,6 +90,34 @@ static void computeHisto(uint32_t *vals, int n) {
 // copy next key
 // do passes
 // extract i
+
+#if 0
+// method to move nans to the bottom
+void nans(uint32_t *vals, int *indicies, int n) {
+	int *m = indicies + n;
+	while (vals[*--m] == 0x7FC00000) { }
+	++m;
+
+
+	if (m != indicies + n) {
+		// buffer shift to m
+		int *j = indicies;
+		int *k = m;
+		int *last = indicies + n;
+		// can this be written as a set of memcpy, or memmove?
+		while (j != k) {
+			uint32_t v0 = *j;
+			*j++ = *k;
+			*k++ = v0;
+			if (k == last) {
+				k = m;
+			} else if (j == m) {
+				m = k;
+			}
+		}
+	}
+}
+#endif
 
 void fradixSort16_64(uint32_t *vals, int n, int *indicies, uint64_t *scratch) {
 

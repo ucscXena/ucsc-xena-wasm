@@ -9,6 +9,7 @@
 #include "fradix16.h"
 #include "fradix.h"
 #include "radix.h"
+#include "float.h"
 
 #define N 1300000
 //#define N 100
@@ -77,6 +78,12 @@ static float *sixValArr() {
 		arr[i] = i * 6 / N;
 	}
 	return arr;
+}
+
+static void setnan(float *arr, int n, int rate, int offset) {
+	for (int i = offset; i < n; i += rate) {
+		arr[i] = NAN;
+	}
 }
 
 // Ordinals in reverse order
@@ -175,11 +182,24 @@ static void validateI(int *a0, int *a1, int *a2, int *indicies, int n) {
 	}
 }
 
+static void testNaN() {
+	float a[] = {FLT_MAX, FLT_MIN, 0, NAN, -FLT_MAX, -FLT_MIN, INFINITY, -INFINITY};
+	int indicies[] = {0, 1, 2, 3, 4, 5, 6, 7};
+	uint64_t scratch[] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+	fradixSort16_64((uint32_t *)a, 8, indicies, scratch);
+	float *mapped = mapIndicies(a, indicies, 8);
+	print(mapped, 8);
+}
+
 static double test16_64(int val) {
 	struct timespec start, stop;
 	float *a0 = threeValArr();
 	float *a1 = sixValArr();
 	float *a2 = uniqArr();
+	setnan(a0, N, 10, 0);
+	setnan(a1, N, 10, 2);
+	setnan(a2, N, 10, 4);
 	int *indicies = getIndicies();
 	uint64_t *scratch = malloc(N * sizeof(uint64_t));
 
@@ -317,6 +337,18 @@ int main()
 
 	{
 		fradixSort16_64_init();
+#if 0
+		testNaN();
+		float *f = malloc(sizeof(float));
+		uint32_t *i = (uint32_t*)f;
+		*f = NAN;
+//		printf("%x\n", abs(*i - 0x7FC00000 + 0x80000000));
+		*i ^= ((abs(*i - 0x7FC00000 + 0x80000000) & 0x80000000) >> 9) | 0x80000000;
+		printf("%x\n", *i);
+		printf("%f\n", *f);
+		printf("hello\n");
+		exit(0);
+#endif
 #if 1
 		test16_64(1);
 		int testN = 100;
