@@ -28,7 +28,7 @@ static void print(float arr[], int n) {
 	printf("\n");
 }
 
-static void printi(uint32_t arr[], int n) {
+static void printi(int arr[], int n) {
 	for (int i = 0; i < n; i++)  {
 		printf("%d ", arr[i]);
 	}
@@ -44,7 +44,7 @@ static int *getIndicies() {
 	return arr;
 }
 
-static float *mapIndicies(float *vals, uint32_t *indicies, int n) {
+static float *mapIndicies(float *vals, int *indicies, int n) {
 	float *out = malloc(n * sizeof(float));
 	for (int i = 0; i < n; ++i) {
 		out[i] = vals[indicies[i]];
@@ -138,7 +138,7 @@ static void validate(float *a0, float *a1, float *a2, int *indicies, int n) {
 	}
 }
 
-static int *mapIndiciesI(int *vals, uint32_t *indicies, int n) {
+static int *mapIndiciesI(int *vals, int *indicies, int n) {
 	int *out = malloc(n * sizeof(int));
 	for (int i = 0; i < n; ++i) {
 		out[i] = vals[indicies[i]];
