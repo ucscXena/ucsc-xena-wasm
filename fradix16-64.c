@@ -18,6 +18,9 @@
 static int *offset0;
 static int *offset1;
 
+#define NAN_FLOP
+
+#ifdef NAN_FLOP
 // nan, +inf, -inf
 // s111 1111 1xxx xxxx xxxx xxxx xxxx xxxx
 // +inf s is 0, high x is 0
@@ -31,14 +34,13 @@ static int *offset1;
 // nan is bitwise above +inf, and we want to sort it as -inf, explictly map
 // it to the flop of -inf.
 #define flop(x) ((x) == 0x7FC00000 ? 0x7FFFFF : ((x) ^ (-((x) >> 31) | 0x80000000)))
-
-// w/o the nan remapping, use this
-//#define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000))
+#else /* NAN_FLOP */
+#define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000))
+#endif
 
 #if 0
 uint32_t flop(uint32_t x) {
-	return x == 0x7FC00000 ? 0x7FFFFF :
-		(x ^ (-(x >> 31) | 0x80000000));
+	return x == 0x7FC00000 ? 0x7FFFFF : (x ^ (-(x >> 31) | 0x80000000));
 }
 #endif
 
@@ -91,7 +93,7 @@ static void computeHisto(uint32_t *vals, int n) {
 // do passes
 // extract i
 
-#if 0
+#ifndef NAN_FLOP
 // method to move nans to the bottom
 void nans(uint32_t *vals, int *indicies, int n) {
 	int *m = indicies + n;
@@ -138,6 +140,9 @@ void fradixSort16_64(uint32_t *vals, int n, int *indicies, uint64_t *scratch) {
 	for (int i = n - 1; i >= 0; i--) {
 		indicies[offset1[part1(flop(scratch[i] & 0xFFFFFFFF))]-- - 1] = scratch[i] >> 32;
 	}
+#ifndef NAN_FLOP
+	nans(vals, indicies, n);
+#endif
 }
 
 void fradixSortL16_64(uint32_t **valsList, int m, int n, int *indicies, uint64_t *scratch) {
