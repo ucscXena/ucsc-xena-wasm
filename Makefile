@@ -8,5 +8,11 @@ bench_objects=radix.o fradix.o fradix16.o fradix16-64.o bench.o
 
 bench: $(bench_objects)
 
+CCALL=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue"]'
+EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_malloc","_free"]'
+MEMOPTS=-s ALLOW_MEMORY_GROWTH=1
+sort.js: fradix16-64.o
+	$(CC) $(CFLAGS) -o $@ $(CCALL) $(EXPORT) $(MEMOPTS) $^
+
 clean:
 	rm -f bench $(bench_objects)
