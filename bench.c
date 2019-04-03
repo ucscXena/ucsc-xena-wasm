@@ -13,7 +13,7 @@
 #define N 1300000
 //#define N 100
 
-#ifdef WASM // not sure if this works
+#ifdef __EMSCRIPTEN__ // not sure if this works
 #define CLOCK CLOCK_MONOTONIC
 #else
 #define CLOCK CLOCK_PROCESS_CPUTIME_ID
