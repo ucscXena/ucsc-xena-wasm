@@ -201,19 +201,20 @@ static double test16_64(int val) {
 	setnan(a1, N, 10, 2);
 	setnan(a2, N, 10, 4);
 	int *indicies = getIndicies();
-	uint64_t *scratch = malloc(N * sizeof(uint64_t));
+	float **list = malloc(3 * sizeof(float*));
+	list[0] = a0;
+	list[1] = a1;
+	list[2] = a2;
 
 	// Note: would prefer CLOCK_PROCESS_CPUTIME_ID, but it
 	// doesn't work in wasm32.
 	clock_gettime(CLOCK, &start);
-	fradixSort16_64((uint32_t *)a2, N, indicies, scratch);
-	fradixSort16_64((uint32_t *)a1, N, indicies, scratch);
-	fradixSort16_64((uint32_t *)a0, N, indicies, scratch);
+	fradixSortL16_64((uint32_t **)list, 3, N, indicies);
 	clock_gettime(CLOCK, &stop);
 	if (val) {
 		validate(a0, a1, a2, indicies, N);
 	}
-	free(scratch);
+	free(list);
 	free(a0);
 	free(a1);
 	free(a2);
