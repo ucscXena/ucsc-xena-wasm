@@ -8,16 +8,18 @@ bench_objects=radix.o fradix.o fradix16.o fradix16-64.o bench.o
 
 bench: $(bench_objects)
 
-CCALL=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue"]'
+RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue"]'
 EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_malloc","_free"]'
-MEMOPTS=-s ALLOW_MEMORY_GROWTH=1
+SORTFLAGS=-s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 --pre-js wrappers.js
 
-sort.js: fradix16-64.o
-	$(CC) $(CFLAGS) -o $@ $(CCALL) $(EXPORT) $(MEMOPTS) $^
+METHODS=fradix16-64.o
+
+sort.js: $(METHODS) wrappers.js
+	$(CC) $(CFLAGS) -o $@ $(RTEXPORT) $(EXPORT) $(SORTFLAGS) $(METHODS)
 
 bench.html: bench
 	cp bench bench.bc
 	$(CC) $(CFLAGS) bench.bc $(MEMOPTS) -o bench.html
 
 clean:
-	rm -f bench $(bench_objects)
+	rm -f bench $(bench_objects) sort.js sort.wasm bench bench.bc bench.html
