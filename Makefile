@@ -14,7 +14,7 @@ SORTFLAGS=-s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 --pre-js wrappers.js
 
 METHODS=fradix16-64.o stats.o
 
-radix-wasm.js: $(METHODS) wrappers.js
+xena.js: $(METHODS) wrappers.js
 	$(CC) $(CFLAGS) -o $@ $(RTEXPORT) $(EXPORT) $(SORTFLAGS) $(METHODS)
 
 bench.html: bench
@@ -22,4 +22,4 @@ bench.html: bench
 	$(CC) $(CFLAGS) bench.bc $(MEMOPTS) -o bench.html
 
 clean:
-	rm -f bench $(bench_objects) radix-wasm.js radix-wasm.wasm bench bench.bc bench.html
+	rm -f bench $(bench_objects) xena.js xena.wasm bench bench.bc bench.html

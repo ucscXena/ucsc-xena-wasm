@@ -1,1 +1,1 @@
-Module.wasmBinary = require('./radix-wasm.wasm');
+Module.wasmBinary = require('./xena.wasm');
