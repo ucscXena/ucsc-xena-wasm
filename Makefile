@@ -8,11 +8,15 @@ bench_objects=radix.o fradix.o fradix16.o fradix16-64.o bench.o
 
 bench: $(bench_objects)
 
+test_stats_objects=stats.o test_stats.o fradix16.o
+
+test_stats: $(test_stats_objects)
+
 RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue"]'
-EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_malloc","_free","_faminmax","_faminmax_init"]'
+EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian"]'
 SORTFLAGS=-s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 --pre-js wrappers.js
 
-METHODS=fradix16-64.o stats.o
+METHODS=fradix16-64.o fradix16.o stats.o
 
 xena.js: $(METHODS) wrappers.js
 	$(CC) $(CFLAGS) -o $@ $(RTEXPORT) $(EXPORT) $(SORTFLAGS) $(METHODS)
@@ -22,4 +26,4 @@ bench.html: bench
 	$(CC) $(CFLAGS) bench.bc $(MEMOPTS) -o bench.html
 
 clean:
-	rm -f bench $(bench_objects) xena.js xena.wasm bench bench.bc bench.html
+	rm -f bench $(bench_objects) xena.js xena.wasm bench bench.bc bench.html $(test_stats_objects) test_stats
