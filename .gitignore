@@ -2,3 +2,5 @@
 gmon.out
 *.o
 /bench
+/bench.js
+/bench.so
