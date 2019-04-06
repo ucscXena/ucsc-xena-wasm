@@ -33,14 +33,14 @@ static int *offset1;
 // 2) swap all the other bits if the number is negative. Additionally, since
 // nan is bitwise above +inf, and we want to sort it as -inf, explictly map
 // it to the flop of -inf.
-#define flop(x) ((x) == 0x7FC00000 ? 0x7FFFFF : ((x) ^ (-((x) >> 31) | 0x80000000)))
+#define flop(x) ((x) == 0x7FC00000U ? 0x7FFFFFU : ((x) ^ (-((x) >> 31) | 0x80000000U)))
 #else /* NAN_FLOP */
-#define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000))
+#define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000U))
 #endif
 
 #if 0
 uint32_t flop(uint32_t x) {
-	return x == 0x7FC00000 ? 0x7FFFFF : (x ^ (-(x >> 31) | 0x80000000));
+	return x == 0x7FC00000U ? 0x7FFFFFU : (x ^ (-(x >> 31) | 0x80000000U));
 }
 #endif
 
@@ -97,7 +97,7 @@ static void computeHisto(uint32_t *vals, int n) {
 // method to move nans to the bottom
 void nans(uint32_t *vals, int *indicies, int n) {
 	int *m = indicies + n;
-	while (vals[*--m] == 0x7FC00000) { }
+	while (vals[*--m] == 0x7FC00000U) { }
 	++m;
 
 
@@ -138,7 +138,7 @@ void fradixSort16_64(uint32_t *vals, int n, int *indicies, uint64_t *scratch) {
 	}
 
 	for (int i = n - 1; i >= 0; i--) {
-		indicies[offset1[part1(flop(scratch[i] & 0xFFFFFFFF))]-- - 1] = scratch[i] >> 32;
+		indicies[offset1[part1(flop(scratch[i] & 0xFFFFFFFFU))]-- - 1] = scratch[i] >> 32;
 	}
 #ifndef NAN_FLOP
 	nans(vals, indicies, n);
