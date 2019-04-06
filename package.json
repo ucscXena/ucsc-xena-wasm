@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "description": "wasm methods for ucsc-xena",
   "main": "xena.js",
+  "files": [
+	  "NOTICE",
+	  "LICENSE",
+	  "xena.js",
+	  "xena.wasm"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
