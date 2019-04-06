@@ -47,16 +47,14 @@ static void computeHisto(uint32_t *vals, int n) {
 	}
 }
 
-// Sorting indicies is quite a bit slower than direct sorting. Is there
-// any way to combine the two? Maybe merge the indicies into a 64 bit value,
-// and use 64 bit store/loads?
 int *fradixSort(uint32_t *vals, int n, int *indicies) {
 	int *output = malloc(n * sizeof(int));
 
 	computeHisto(vals, n);
 
 	for (int i = n - 1; i >= 0; i--) {
-		output[offset0[part0(flop(vals[i]))]-- - 1] = i;
+		int ii = indicies[i];
+		output[offset0[part0(flop(vals[ii]))]-- - 1] = ii;
 	}
 
 	for (int i = n - 1; i >= 0; i--) {

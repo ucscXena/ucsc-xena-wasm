@@ -382,7 +382,6 @@ int main()
 
 	{
 		fradixSort_init();
-// XXX This method is not sorting correctly
 #if 1
 		test(1);
 		int testN = 100;
