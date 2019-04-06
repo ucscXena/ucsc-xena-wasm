@@ -8,11 +8,11 @@ bench_objects=radix.o fradix.o fradix16.o fradix16-64.o bench.o
 
 bench: $(bench_objects)
 
-RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue"]'
-EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_malloc","_free"]'
+RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue"]'
+EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_malloc","_free","_faminmax","_faminmax_init"]'
 SORTFLAGS=-s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 --pre-js wrappers.js
 
-METHODS=fradix16-64.o
+METHODS=fradix16-64.o stats.o
 
 radix-wasm.js: $(METHODS) wrappers.js
 	$(CC) $(CFLAGS) -o $@ $(RTEXPORT) $(EXPORT) $(SORTFLAGS) $(METHODS)
