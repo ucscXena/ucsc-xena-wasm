@@ -10,7 +10,7 @@ void faminmax_init() {
 	result = malloc(2 * sizeof(float));
 }
 
-float *faminmax(float *vals, int n, float *minp, float *maxp) {
+float *faminmax(float *vals, int n) {
 	float min = INFINITY;
 	float max = -INFINITY;
 	float v;
