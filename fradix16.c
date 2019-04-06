@@ -62,6 +62,23 @@ void fradixSort16(uint32_t *vals, int n, int *indicies) {
 	free(output);
 }
 
+void fradixSort16InPlace(uint32_t *vals, int n) {
+	int *scratch = malloc(n * sizeof(int));
+
+	computeHisto(vals, n);
+
+	for (int i = n - 1; i >= 0; i--) {
+		uint32_t v = vals[i];
+		scratch[offset0[part0(flop(v))]-- - 1] = v;
+	}
+
+	for (int i = n - 1; i >= 0; i--) {
+		uint32_t v = scratch[i];
+		vals[offset1[part1(flop(v))]-- - 1] = v;
+	}
+	free(scratch);
+}
+
 void fradixSort16_init() {
 	offset0 = malloc(offsetSize * sizeof(int));
 	offset1 = malloc(offsetSize * sizeof(int));

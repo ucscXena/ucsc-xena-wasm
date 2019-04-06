@@ -145,6 +145,22 @@ static void validate(float *a0, float *a1, float *a2, int *indicies, int n) {
 	}
 }
 
+static void validateInPlace(float *a0, float *a1, float *a2, int n) {
+	for (int i = 1; i < N; ++i) {
+		int j = i - 1;
+		int k = i;
+		if (a0[k] < a0[j] ||
+		    a1[k] < a1[j] ||
+		    a2[k] < a2[j]) {
+
+			printf("Wrong sort:\n");
+//			dumpSorted(a0, a1, a2, indicies, n);
+//			exit(1);
+			break;
+		}
+	}
+}
+
 static int *mapIndiciesI(int *vals, int *indicies, int n) {
 	int *out = malloc(n * sizeof(int));
 	for (int i = 0; i < n; ++i) {
@@ -241,6 +257,26 @@ static double test16(int val) {
 	free(a1);
 	free(a2);
 	free(indicies);
+	return (stop.tv_sec - start.tv_sec) * 1e3 + (stop.tv_nsec - start.tv_nsec) / 1e6;    // in milliseconds
+}
+
+static double test16IP(int val) {
+	struct timespec start, stop;
+	float *a0 = threeValArr();
+	float *a1 = sixValArr();
+	float *a2 = uniqArr();
+
+	clock_gettime(CLOCK, &start);
+	fradixSort16InPlace((uint32_t *)a2, N);
+	fradixSort16InPlace((uint32_t *)a1, N);
+	fradixSort16InPlace((uint32_t *)a0, N);
+	clock_gettime(CLOCK, &stop);
+	if (val) {
+		validateInPlace(a0, a1, a2, N);
+	}
+	free(a0);
+	free(a1);
+	free(a2);
 	return (stop.tv_sec - start.tv_sec) * 1e3 + (stop.tv_nsec - start.tv_nsec) / 1e6;    // in milliseconds
 }
 
@@ -378,6 +414,21 @@ int main()
 		double m = test16(0);
 #endif
 		printf("fradix16 time min %f ms\n", m);
+	}
+
+	{
+#if 1
+		test16IP(1);
+		int testN = 100;
+		double *result = malloc(testN * sizeof(double));
+		for (int i = 0; i < testN; ++i) {
+			result[i] = test16IP(0);
+		}
+		double m = min(result, testN);
+#else
+		double m = test16IP(0);
+#endif
+		printf("fradix16InPlace time min %f ms\n", m);
 	}
 
 	{
