@@ -19,7 +19,9 @@
 static int *offset0;
 static int *offset1;
 
-#define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000))
+// sort NAN to bottom
+#define flop(x) ((x) == 0x7FC00000U ? 0x7FFFFFU : ((x) ^ (-((x) >> 31) | 0x80000000U)))
+//#define flop(x) ((x) ^ (-((x) >> 31) | 0x80000000))
 #define mask ((1 << 16) - 1)
 #define part0(x) (mask & (x))
 #define part1(x) (mask & ((x) >> 16))
