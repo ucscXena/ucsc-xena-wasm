@@ -1,0 +1,17 @@
+{
+  "name": "ucsc-xena-wasm",
+  "version": "1.0.0",
+  "description": "wasm methods for ucsc-xena",
+  "main": "xena.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "radix",
+    "sort",
+    "wasm",
+    "performance"
+  ],
+  "author": "Brian Craft",
+  "license": "Apache-2.0"
+}
