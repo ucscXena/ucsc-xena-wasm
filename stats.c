@@ -14,7 +14,7 @@ float *faminmax(float *vals, int n) {
 	float min = INFINITY;
 	float max = -INFINITY;
 	float v;
-	while (--n) {
+	while (n--) {
 		v = *(vals++);
 		if (v < min) {
 			min = v;
