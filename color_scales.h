@@ -4,10 +4,15 @@ struct rgb {
 	uint8_t b;
 };
 
-struct linear_scale {
+struct scale {
+	double domain[4];
 	int count;
-	float domain[4];
 	struct rgb range[4];
 };
 
-struct rgb get_color_linear(struct linear_scale *s, float v);
+struct color_lines {
+	double m[3];
+	double b[3];
+};
+
+struct rgb get_color_linear(struct scale *s, double v);
