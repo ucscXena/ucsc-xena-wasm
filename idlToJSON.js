@@ -26,7 +26,7 @@ function run(output, files) {
 		return assocIn(acc, path, v);
 	}, {});
 
-	var txt = `Module.struct = ${JSON.stringify(json)};`
+	var txt = `Object.assign(Module, ${JSON.stringify(json)});`
 
 	fs.writeFileSync(output, txt);
 }

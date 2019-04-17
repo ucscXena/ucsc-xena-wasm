@@ -13,20 +13,31 @@ test_stats_objects=stats.o test_stats.o fradix16.o
 test_stats: $(test_stats_objects)
 
 RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue"]'
-EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian","_get_color_linear","_get_color_log2","_region_color_linear_test","_get_get_color_linear","_get_get_color_log2","_draw_subcolumn","_tally_domains","_calloc"]'
+EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian","_get_color_linear","_get_color_log2","_region_color_linear_test","_draw_subcolumn","_tally_domains"]'
 SORTFLAGS=-s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 --pre-js wrappers.js --pre-js wasm_struct.js
 
-%.idl.c %.h: %.idl
-	./idl.js $< $@ $*.h
+IDL := $(wildcard *.idl)
+IDL_DERIVED := $(IDL:.idl=.js) $(IDL:.idl=.c) $(IDL:.idl=.h) $(IDL:.idl=.wasm) $(IDL:.idl=.probe)
 
-%.idl.c.js %.idl.c.wasm: %.idl.c
-	emcc -o $@ $<
+foo:
+	echo $(IDL)
+	echo $(IDL_DERIVED)
 
-%.idl.tsv: %.idl.c.js
+%.c %.h: %.idl
+	./idl.js $*.idl $*.c $*.h
+
+%.js %.wasm: %.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+%.probe: %.js
 	node $< > $@
 
-wasm_struct.js: heatmap_struct.idl.tsv color_scales_struct.idl.tsv
+wasm_struct.js: heatmap_struct.probe color_scales_struct.probe
 	./idlToJSON.js $@ $^
+
+color_scales.o: color_scales.h color_scales_struct.h
+
+heatmap.o: heatmap_struct.h color_scales.h color_scales_struct.h
 
 METHODS=fradix16-64.o fradix16.o stats.o color_scales.o heatmap.o
 
@@ -38,4 +49,4 @@ bench.html: bench
 	$(CC) $(CFLAGS) bench.bc $(MEMOPTS) -o bench.html
 
 clean:
-	rm -f *.map *.wast bench heatmap_struct.h color_scales_struct.h  *.o *.wasm *.bc *.idl.c *.idl.tsv *.idl.c.js wasm_struct.js xena.js xena.wasm bench bench.html $(test_stats_objects) test_stats
+	rm -f *.map *.wast bench heatmap_struct.h color_scales_struct.h  *.o *.wasm *.bc wasm_struct.js xena.js bench bench.html $(test_stats_objects) test_stats $(IDL_DERIVED)

@@ -2,7 +2,8 @@
 #include <math.h>
 #include "color_scales.h"
 
-uint32_t get_color_linear(struct scale *s, double v) {
+uint32_t get_color_linear(ctx ctx, double v) {
+	struct scale *s = ctx.scale;
 	int h = s->count - 1;
 	if (v >= s->domain[h]) {
 		return s->range[h];
@@ -37,7 +38,8 @@ uint32_t get_color_linear(struct scale *s, double v) {
 }
 
 // for now, only support one range
-uint32_t get_color_log2(struct scale *s, double v) {
+uint32_t get_color_log2(ctx ctx, double v) {
+	struct scale *s = ctx.scale;
 	if (v < s->domain[0]) {
 		return s->range[0];
 	}
@@ -50,11 +52,22 @@ uint32_t get_color_log2(struct scale *s, double v) {
 	return RGB(r, g, b);
 }
 
-// XXX Haven't found a way to export function pointers during build.
-uint32_t (*get_get_color_linear())(struct scale *s, double v) {
-	return get_color_linear;
+// ordinal scale is stored as
+// [n, c0, c1, c2, .... cn-1]
+uint32_t get_color_ordinal(ctx ctx, double v) {
+	int i = v;
+	uint32_t *o = ctx.ordinal;
+	uint32_t c = o[0];
+	return (o + 1)[i % c];
 }
 
-uint32_t (*get_get_color_log2())(struct scale *s, double v) {
-	return get_color_log2;
+uint32_t (*get_method(enum type type))(ctx, double) {
+	switch (type) {
+		case LINEAR:
+			return get_color_linear;
+		case LOG:
+			return get_color_log2;
+		case ORDINAL:
+			return get_color_ordinal;
+	}
 }

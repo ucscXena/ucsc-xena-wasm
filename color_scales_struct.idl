@@ -9,5 +9,8 @@ module.exports = {
 			['int', 'count'],
 			['uint32_t', 'range', 4]]
 	},
+	enum: {
+		type: ['LOG', 'LINEAR', 'ORDINAL']
+	},
 	includes: ['<stdint.h>']
 }

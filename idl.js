@@ -8,11 +8,19 @@ var path = require('path');
 var fs = require('fs');
 require('./polyfill');
 
+var mapObject = (obj = {}, fn) =>
+	Object.keys(obj).map(k => fn(obj[k], k));
+
 function structProbeCode(fields, name) {
 	return [
-	`\tprintf("${name}\\tsize\\t%lu\\n", sizeof(struct ${name}));`,
+	`\tprintf("struct\\t${name}\\tsize\\t%lu\\n", sizeof(struct ${name}));`,
 	...(fields.map(([type, field, count]) =>
-		`\tprintf("${name}\\toffset\\t${field}\\t%lu\\n", (uintptr_t)&((struct ${name}*)0)->${field});`))];
+		`\tprintf("struct\\t${name}\\toffset\\t${field}\\t%lu\\n", (uintptr_t)&((struct ${name}*)0)->${field});`))];
+}
+
+function enumProbeCode(vals, name) {
+	return vals.map((v, i) =>
+		`\tprintf("enum\\t${name}\\t${v}\\t${i}\\n");`)
 }
 
 function probeCode(input, header) {
@@ -21,7 +29,8 @@ function probeCode(input, header) {
 	'#include <stdio.h>',
 	'#include <inttypes.h>',
 	'int main(int argc, char *argv[]) {',
-	...Object.keys(input.struct).map(struct => structProbeCode(input.struct[struct], struct)).flat(),
+	...mapObject(input.struct, structProbeCode).flat(),
+	...mapObject(input.enum, enumProbeCode).flat(),
 	'}'].join('\n') + '\n';
 }
 
@@ -34,9 +43,15 @@ function structCode(fields, name) {
 		'};'];
 }
 
+function enumCode(vals, name) {
+	return [`enum ${name} {${vals.join(', ')}};`]
+}
+
 function headerCode(input) {
 	return [
-		...Object.keys(input.struct).map(struct => structCode(input.struct[struct], struct)).flat()].join('\n') + '\n';
+		...mapObject(input.struct, structCode).flat(),
+		...mapObject(input.enum, enumCode).flat()
+	].join('\n') + '\n';
 }
 
 // Can we all the routines into a single executable? Is there a reason to?

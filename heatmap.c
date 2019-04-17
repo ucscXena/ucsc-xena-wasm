@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 #include "color_scales.h"
 
 // We're holding a color scale, which has some domain,
@@ -53,10 +54,13 @@ static int sum(uint32_t *counts, int n)  {
 	return s;
 }
 
+typedef uint32_t region_color_fn(uint32_t (*)(ctx, double), ctx, float *, int, int);
+
 // XXX make polymorphic for categorical
 // XXX is struct copying expensive, here? Should we be allocating
 // at the top & passing pointers? Esp. for summary?
-static uint32_t region_color(uint32_t (*colorfn)(struct scale *, double), struct scale *s, float *d, int start, int end) {
+static uint32_t region_color_default(uint32_t (*colorfn)(ctx, double), ctx ctx, float *d, int start, int end) {
+	struct scale *s = ctx.scale;
 	struct summary sy;
 	tally_domains(&sy, s, d, start, end);
 	int ranges = s->count + 1;
@@ -68,7 +72,7 @@ static uint32_t region_color(uint32_t (*colorfn)(struct scale *, double), struct
 		for (int i = 0; i < ranges; ++i) {
 			int c = sy.count[i];
 			if (c) {
-				uint32_t rcolor = colorfn(s, sy.sum[i] / c);
+				uint32_t rcolor = colorfn(ctx, sy.sum[i] / c);
 				int rc = R(rcolor);
 				r += ((double)rc * rc * c) / total;
 				int gc = G(rcolor);
@@ -84,8 +88,31 @@ static uint32_t region_color(uint32_t (*colorfn)(struct scale *, double), struct
 	return color;
 }
 
-uint32_t region_color_linear_test(struct scale *s, float *d, int start, int end) {
-	return region_color(get_color_linear, s, d, start, end);
+uint32_t region_color_linear_test(ctx ctx, float *d, int start, int end) {
+	return region_color_default(get_method(LINEAR), ctx, d, start, end);
+}
+
+int randmax(int m) {
+	return (int)(((double)rand() * m) / RAND_MAX);
+}
+
+// XXX look into eliminating this alloc/free
+static uint32_t region_color_ordinal(uint32_t (*colorfn)(ctx, double), ctx ctx, float *d, int start, int end) {
+	// The js algorithm is to pick randomly from the
+	// non-null values in the range [start, end). It does this
+	// by first filtering the data. Not sure there's a better way.
+	float *filtered = malloc((end - start) * sizeof(float));
+	float *p = filtered;
+	for (int i = start; i < end; ++i) {
+		float v = d[i];
+		if (!isnan(v)) {
+			*p++ = v;
+		}
+	}
+	int count = p - filtered;
+	uint32_t color = count ? colorfn(ctx, filtered[randmax(count)]) : 0xFF808080;
+	free(filtered);
+	return color;
 }
 
 static void fill_region(uint32_t *img, int width, int elstart, int elsize,
@@ -102,19 +129,19 @@ static void fill_region(uint32_t *img, int width, int elstart, int elsize,
 	}
 }
 
-
-static void project_samples(uint32_t (*colorfn)(struct scale *, double),
-		struct scale *s, float *d, int first, int count,
+static void project_samples(
+		region_color_fn region_color,
+		color_fn colorfn,
+		ctx ctx, float *d, int first, int count,
 		uint32_t *img, int width, int height,
 		int elstart, int elsize) {
 
 	for (int i = 0; i < count; ++i) {
-		// XXX skip empty regions
 		int ry = i * height / count;
 		int rheight = (i + 1) * height / count - ry;
 
-		uint32_t color = region_color(colorfn, s, d, first + i, first + i + 1);
-		if (color != 0x808080FF) {
+		uint32_t color = region_color(colorfn, ctx, d, first + i, first + i + 1);
+		if (color != 0xFF808080) {
 			fill_region(img, width, elstart, elsize, ry, rheight, color);
 		}
 	}
@@ -125,32 +152,44 @@ static int div_ceil(int x, int y) {
 	return (x + y - 1) / y;
 }
 
-static void project_pixels(uint32_t (*colorfn)(struct scale *, double),
-		struct scale *s, float *d, int first, int count,
+static void project_pixels(
+		region_color_fn region_color,
+		color_fn colorfn,
+		ctx ctx, float *d, int first, int count,
 		uint32_t *img, int width, int height,
 		int elstart, int elsize) {
 
 	for (int ry = 0; ry < height; ++ry) {
-		// XXX skip empty regions
 		int rstart = div_ceil(ry * count, height);
 		int rend = div_ceil((ry + 1) * count, height) - 1;
 
-		uint32_t color = region_color(colorfn, s, d, first + rstart, first + rend + 1);
-		if (color != 0x808080FF) {
+		uint32_t color = region_color(colorfn, ctx, d, first + rstart, first + rend + 1);
+		if (color != 0xFF808080) {
 			fill_region(img, width, elstart, elsize, ry, 1, color);
 		}
 	}
 }
 
 void draw_subcolumn(
-		uint32_t (*colorfn)(struct scale *, double),
-		struct scale *s, float *d, int first, int count,
+		enum type type,
+		void *vctx, float *d, int first, int count,
 		uint32_t *img, int width, int height,
 		int elstart, int elsize) {
 
+	ctx ctx;
+	// Using a union to represent different pointer types. Maybe we should
+	// just use void*. We can't pass it in as a union because the wasm
+	// entry point doesn't handle the union correctly. So, passing it as void*
+	// and populating the union here. Doesn't really matter which union member
+	// we assign, since they're the same size, and location.
+	ctx.scale = vctx;
+
+	region_color_fn *region_color = type == ORDINAL ? region_color_ordinal : region_color_default;
+	color_fn *colorfn = get_method(type);
+
 	if (height > count) {
-		project_samples(colorfn, s, d, first, count, img, width, height, elstart, elsize);
+		project_samples(region_color, colorfn, ctx, d, first, count, img, width, height, elstart, elsize);
 	} else {
-		project_pixels(colorfn, s, d, first, count, img, width, height, elstart, elsize);
+		project_pixels(region_color, colorfn, ctx, d, first, count, img, width, height, elstart, elsize);
 	}
 }
