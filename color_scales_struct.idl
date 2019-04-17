@@ -1,0 +1,13 @@
+'use strict';
+
+module.exports = {
+	struct: {
+		scale: [
+			['double', 'domain', 4],
+			['double', 'm', 3],
+			['double', 'b', 3],
+			['int', 'count'],
+			['uint32_t', 'range', 4]]
+	},
+	includes: ['<stdint.h>']
+}

@@ -1,18 +1,10 @@
-struct rgb {
-	uint8_t r;
-	uint8_t g;
-	uint8_t b;
-};
+#include "color_scales_struct.h"
 
-struct scale {
-	double domain[4];
-	int count;
-	struct rgb range[4];
-};
+#define R(x) (((x) >> 24) & 0xFF)
+#define G(x) (((x) >> 16) & 0xFF)
+#define B(x) (((x) >> 8) & 0xFF)
+#define RGB(r, g, b) (((r) << 24) | ((g) << 16) | ((b) << 8) | 255)
 
-struct color_lines {
-	double m[3];
-	double b[3];
-};
+uint32_t get_color_linear(struct scale *, double v);
+uint32_t get_color_log2(struct scale *, double v);
 
-struct rgb get_color_linear(struct scale *s, double v);

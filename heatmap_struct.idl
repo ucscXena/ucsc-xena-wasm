@@ -1,0 +1,11 @@
+'use strict';
+
+var MAX_STOP = 4;
+module.exports = {
+	struct: {
+		summary: [
+			['double', 'sum', MAX_STOP + 1],
+			['uint32_t', 'count', MAX_STOP + 1]]
+	},
+	includes: ['<stdint.h>']
+};
