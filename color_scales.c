@@ -71,3 +71,9 @@ uint32_t (*get_method(enum type type))(ctx, double) {
 			return get_color_ordinal;
 	}
 }
+
+uint32_t test_scale_method(enum type type, void *vctx, double v) {
+	ctx ctx;
+	ctx.scale = vctx;
+	return get_method(type)(ctx, v);
+}

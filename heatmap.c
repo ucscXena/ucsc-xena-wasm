@@ -88,7 +88,9 @@ static uint32_t region_color_default(uint32_t (*colorfn)(ctx, double), ctx ctx, 
 	return color;
 }
 
-uint32_t region_color_linear_test(ctx ctx, float *d, int start, int end) {
+uint32_t region_color_linear_test(void *vctx, float *d, int start, int end) {
+	ctx ctx;
+	ctx.scale = vctx;
 	return region_color_default(get_method(LINEAR), ctx, d, start, end);
 }
 
