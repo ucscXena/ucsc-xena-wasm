@@ -195,3 +195,9 @@ void draw_subcolumn(
 		project_pixels(region_color, colorfn, ctx, d, first, count, img, width, height, elstart, elsize);
 	}
 }
+
+void map_indicies(int count, uint32_t *indicies, float *in, float *out) {
+	for (int i = 0; i < count; i++) {
+		out[i] = in[indicies[i]];
+	}
+}
