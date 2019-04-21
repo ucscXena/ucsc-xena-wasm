@@ -11,13 +11,13 @@
 
 #include "heatmap_struct.h"
 
-void tally_domains(struct summary *summary, struct scale *s, float *data, int start, int end) {
+void tally_domains(struct summary *summary, struct scale *s, float *data, uint32_t *order, int start, int end) {
 	int h = s->count;
 	float v;
 	int d;
 	memset(summary, 0, sizeof(struct summary));
 	for (int i = start; i < end; ++i) {
-		float v = data[i];
+		float v = data[order[i]];
 		if (isnan(v)) {
 			continue;
 		}
@@ -54,15 +54,12 @@ static int sum(uint32_t *counts, int n)  {
 	return s;
 }
 
-typedef uint32_t region_color_fn(uint32_t (*)(ctx, double), ctx, float *, int, int);
+typedef uint32_t region_color_fn(uint32_t (*)(ctx, double), ctx, float *, uint32_t *, int, int);
 
-// XXX make polymorphic for categorical
-// XXX is struct copying expensive, here? Should we be allocating
-// at the top & passing pointers? Esp. for summary?
-static uint32_t region_color_default(uint32_t (*colorfn)(ctx, double), ctx ctx, float *d, int start, int end) {
+static uint32_t region_color_default(uint32_t (*colorfn)(ctx, double), ctx ctx, float *d, uint32_t *order, int start, int end) {
 	struct scale *s = ctx.scale;
 	struct summary sy;
-	tally_domains(&sy, s, d, start, end);
+	tally_domains(&sy, s, d, order, start, end);
 	int ranges = s->count + 1;
 	int total = sum(sy.count, ranges);
 	uint32_t color;
@@ -88,25 +85,25 @@ static uint32_t region_color_default(uint32_t (*colorfn)(ctx, double), ctx ctx, 
 	return color;
 }
 
-uint32_t region_color_linear_test(void *vctx, float *d, int start, int end) {
+uint32_t region_color_linear_test(void *vctx, float *d, uint32_t *order, int start, int end) {
 	ctx ctx;
 	ctx.scale = vctx;
-	return region_color_default(get_method(LINEAR), ctx, d, start, end);
+	return region_color_default(get_method(LINEAR), ctx, d, order, start, end);
 }
 
-int randmax(int m) {
+static int randmax(int m) {
 	return (int)(((double)rand() * m) / RAND_MAX);
 }
 
 // XXX look into eliminating this alloc/free
-static uint32_t region_color_ordinal(uint32_t (*colorfn)(ctx, double), ctx ctx, float *d, int start, int end) {
+static uint32_t region_color_ordinal(uint32_t (*colorfn)(ctx, double), ctx ctx, float *d, uint32_t *order, int start, int end) {
 	// The js algorithm is to pick randomly from the
 	// non-null values in the range [start, end). It does this
 	// by first filtering the data. Not sure there's a better way.
 	float *filtered = malloc((end - start) * sizeof(float));
 	float *p = filtered;
 	for (int i = start; i < end; ++i) {
-		float v = d[i];
+		float v = d[order[i]];
 		if (!isnan(v)) {
 			*p++ = v;
 		}
@@ -134,7 +131,7 @@ static void fill_region(uint32_t *img, int width, int elstart, int elsize,
 static void project_samples(
 		region_color_fn region_color,
 		color_fn colorfn,
-		ctx ctx, float *d, int first, int count,
+		ctx ctx, float *d, uint32_t *order, int first, int count,
 		uint32_t *img, int width, int height,
 		int elstart, int elsize) {
 
@@ -142,7 +139,7 @@ static void project_samples(
 		int ry = i * height / count;
 		int rheight = (i + 1) * height / count - ry;
 
-		uint32_t color = region_color(colorfn, ctx, d, first + i, first + i + 1);
+		uint32_t color = region_color(colorfn, ctx, d, order, first + i, first + i + 1);
 		if (color != 0xFF808080) {
 			fill_region(img, width, elstart, elsize, ry, rheight, color);
 		}
@@ -157,7 +154,7 @@ static int div_ceil(int x, int y) {
 static void project_pixels(
 		region_color_fn region_color,
 		color_fn colorfn,
-		ctx ctx, float *d, int first, int count,
+		ctx ctx, float *d, uint32_t *order, int first, int count,
 		uint32_t *img, int width, int height,
 		int elstart, int elsize) {
 
@@ -165,7 +162,7 @@ static void project_pixels(
 		int rstart = div_ceil(ry * count, height);
 		int rend = div_ceil((ry + 1) * count, height) - 1;
 
-		uint32_t color = region_color(colorfn, ctx, d, first + rstart, first + rend + 1);
+		uint32_t color = region_color(colorfn, ctx, d, order, first + rstart, first + rend + 1);
 		if (color != 0xFF808080) {
 			fill_region(img, width, elstart, elsize, ry, 1, color);
 		}
@@ -174,7 +171,7 @@ static void project_pixels(
 
 void draw_subcolumn(
 		enum type type,
-		void *vctx, float *d, int first, int count,
+		void *vctx, float *d, uint32_t *order, int first, int count,
 		uint32_t *img, int width, int height,
 		int elstart, int elsize) {
 
@@ -190,14 +187,8 @@ void draw_subcolumn(
 	color_fn *colorfn = get_method(type);
 
 	if (height > count) {
-		project_samples(region_color, colorfn, ctx, d, first, count, img, width, height, elstart, elsize);
+		project_samples(region_color, colorfn, ctx, d, order, first, count, img, width, height, elstart, elsize);
 	} else {
-		project_pixels(region_color, colorfn, ctx, d, first, count, img, width, height, elstart, elsize);
-	}
-}
-
-void map_indicies(int count, uint32_t *indicies, float *in, float *out) {
-	for (int i = 0; i < count; i++) {
-		out[i] = in[indicies[i]];
+		project_pixels(region_color, colorfn, ctx, d, order, first, count, img, width, height, elstart, elsize);
 	}
 }
