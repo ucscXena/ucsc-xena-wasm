@@ -12,6 +12,14 @@ test_stats_objects=stats.o test_stats.o fradix16.o
 
 test_stats: $(test_stats_objects)
 
+test_baos_objects=baos.o test_baos.o
+
+test_baos: $(test_baos_objects)
+
+test_htfc_objects=htfc.o huffman.o baos.o test_htfc.o
+
+test_htfc: $(test_htfc_objects)
+
 RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue"]'
 EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian","_get_color_linear","_get_color_log2","_region_color_linear_test","_draw_subcolumn","_tally_domains","_test_scale_method"]'
 SORTFLAGS=-s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 --pre-js wrappers.js --pre-js wasm_struct.js
@@ -49,4 +57,4 @@ bench.html: bench
 	$(CC) $(CFLAGS) bench.bc $(MEMOPTS) -o bench.html
 
 clean:
-	rm -f *.map *.wast bench heatmap_struct.h color_scales_struct.h  *.o *.wasm *.bc wasm_struct.js xena.js bench bench.html $(test_stats_objects) test_stats $(IDL_DERIVED)
+	rm -f *.map *.wast bench heatmap_struct.h color_scales_struct.h  *.o *.wasm *.bc wasm_struct.js xena.js bench bench.html test_stats test_htfc test_baos $(IDL_DERIVED)

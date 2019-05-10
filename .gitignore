@@ -6,3 +6,5 @@ gmon.out
 /bench.so
 /xena.js
 /test_stats
+/test_baos
+/test_htfc
