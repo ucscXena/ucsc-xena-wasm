@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -165,31 +166,31 @@ void uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner) {
 	free(header);
 }
 
-void htfc_search(struct htfc *htfc, char *substring, struct search_result *result) {
+void htfc_search(struct htfc *htfc, int (*cmp)(const char *, const char *), char *substring, struct search_result *result) {
 	int matches = 0;
 	struct baos *out = baos_new();
 	struct inner inner;
 	int i;
 	for (i = 0; i < htfc->bin_count - 1; ++i) {
 		uncompress_bin(htfc, i, &inner);
-		if (strstr(inner.current, substring)) {
+		if (cmp(inner.current, substring)) {
 			baos_push_int(out, i * htfc->bin_size);
 		}
 		for (int j = 1; j < htfc->bin_size; ++j) {
 			inner_next(&inner);
-			if (strstr(inner.current, substring)) {
+			if (cmp(inner.current, substring)) {
 				baos_push_int(out, i * htfc->bin_size + j);
 			}
 		}
 		free(inner.buff); // XXX this API is a bit wonky
 	}
 	uncompress_bin(htfc, i, &inner);
-	if (strstr(inner.current, substring)) {
+	if (cmp(inner.current, substring)) {
 		baos_push_int(out, i * htfc->bin_size);
 	}
 	for (int j = 1; j < htfc->length % htfc->bin_size; ++j) {
 		inner_next(&inner);
-		if (strstr(inner.current, substring)) {
+		if (cmp(inner.current, substring)) {
 			baos_push_int(out, i * htfc->bin_size + j);
 		}
 	}
@@ -210,8 +211,16 @@ void htfc_store(uint8_t *buff, uint32_t len) {
 	htfc_cache = htfc_new(buff, len);
 }
 
+int contains(const char *a, const char *b) {
+	return strcasestr(a, b) ? 1 : 0;
+}
+
+int exact(const char *a, const char *b) {
+	return strcmp(a, b) ? 0 : 1;
+}
+
 // result.matches must be freed after use
-struct search_result *htfc_search_store(char *substring) {
-	htfc_search(htfc_cache, substring, &htfc_cache_result);
+struct search_result *htfc_search_store(char *substring, enum search_type type) {
+	htfc_search(htfc_cache, type == EXACT ? exact : contains, substring, &htfc_cache_result);
 	return &htfc_cache_result;
 }

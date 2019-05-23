@@ -6,5 +6,8 @@ module.exports = {
 			['uint32_t', 'count'],
 			['uint32_t *', 'matches']]
 	},
+	enum: {
+		search_type: ['EXACT', 'CONTAINS']
+	},
 	includes: ['<stdint.h>']
 };
