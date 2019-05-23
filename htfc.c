@@ -3,13 +3,14 @@
 #include <stdint.h>
 #include "baos.h"
 #include "huffman.h"
+#include "htfc_struct.h"
 #include "htfc.h"
 
 struct inner {
 	uint8_t *buff;
 	size_t len;
 	size_t c;
-	uint8_t current[500]; // XXX handle resizing
+	char current[500]; // XXX handle resizing
 };
 
 static void inner_init(struct inner *inner, uint8_t *buff, size_t len,
@@ -68,7 +69,11 @@ struct htfc {
 	int bin_offsets;
 	int bin_count; // drop this?
 	int first_bin;
+#ifdef TREE
 	struct node *bin_huff;
+#else
+	struct decoder decoder;
+#endif
 	struct node *header_huff;
 };
 
@@ -82,15 +87,24 @@ void htfc_init(struct htfc *htfc, uint8_t *buff, size_t buff_length) {
 	int bin_count_offset = bin_dict_offset + huff_dict_len(buff32, bin_dict_offset); // 32
 	htfc->bin_count = buff32[bin_count_offset];
 	htfc->first_bin = bin_count_offset + htfc->bin_count + 1; // 32
+#ifdef TREE
 	htfc->bin_huff = huffman_new();
 	huffman_tree(htfc->bin_huff, buff, bin_dict_offset);
+#else
+	huffman_decoder_init(&htfc->decoder, buff, bin_dict_offset); // for canonical decoder
+#endif
 	htfc->header_huff = huffman_new();
 	huffman_ht_tree(htfc->header_huff, buff, 8);
 	htfc->bin_offsets = bin_count_offset + 1;
 }
 
 void htfc_free(struct htfc *htfc) {
+#ifdef TREE
 	huffman_free(htfc->bin_huff);
+#else
+	free(htfc->decoder.base);
+	free(htfc->decoder.offset);
+#endif
 	huffman_free(htfc->header_huff);
 	free(htfc);
 }
@@ -105,6 +119,7 @@ int htfc_count(struct htfc *htfc) {
 	return htfc->length;
 }
 
+// XXX this looks slow
 void baos_push_int(struct baos *out, int i) {
 	baos_push(out, i & 0xff);
 	baos_push(out, (i >> 8) & 0xff);
@@ -119,7 +134,7 @@ void baos_push_int(struct baos *out, int i) {
 //     concat inner string
 // Need to change the API surface for huffman, and baos?
 // Maybe use something other than baos for header?
-struct inner *uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner) {
+void uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner) {
 	struct baos *out = baos_new(); // XXX smaller bin size, or alternate output API?
 
 	uint32_t *buff32 = (uint32_t *)htfc->buff;
@@ -137,9 +152,16 @@ struct inner *uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inn
 		4 * htfc->first_bin + buff32[htfc->bin_offsets + 1 + bin_index];
 	struct baos *out2 = baos_new();
 
+#ifdef TREE
 	huffman_decode_range(htfc->bin_huff, htfc->buff, header_p, upper, out2);
+#else
+	huffman_canonical_decode(&htfc->decoder, htfc->buff, header_p, upper, out2);
+#endif
+
 	int inner_len = baos_count(out2);
-	inner_init(inner, baos_to_array(out2), inner_len, header, header_len);
+	uint8_t *out2_arr = baos_to_array(out2);
+
+	inner_init(inner, out2_arr, inner_len, header, header_len);
 	free(header);
 }
 
@@ -174,4 +196,22 @@ void htfc_search(struct htfc *htfc, char *substring, struct search_result *resul
 	free(inner.buff); // XXX this API is a bit wonky
 	result->count = baos_count(out) / 4;
 	result->matches = (uint32_t *)baos_to_array(out);
+}
+
+// singletons, for xena client
+static struct htfc *htfc_cache = NULL;
+static struct search_result htfc_cache_result;
+
+void htfc_store(uint8_t *buff, uint32_t len) {
+	if (htfc_cache) {
+		free(htfc_cache->buff);
+		free(htfc_cache);
+	}
+	htfc_cache = htfc_new(buff, len);
+}
+
+// result.matches must be freed after use
+struct search_result *htfc_search_store(char *substring) {
+	htfc_search(htfc_cache, substring, &htfc_cache_result);
+	return &htfc_cache_result;
 }

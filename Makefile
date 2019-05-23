@@ -21,7 +21,7 @@ test_htfc_objects=htfc.o huffman.o baos.o test_htfc.o
 test_htfc: $(test_htfc_objects)
 
 RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue"]'
-EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian","_get_color_linear","_get_color_log2","_region_color_linear_test","_draw_subcolumn","_tally_domains","_test_scale_method"]'
+EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian","_get_color_linear","_get_color_log2","_region_color_linear_test","_draw_subcolumn","_tally_domains","_test_scale_method","_htfc_search_store","_htfc_store"]'
 SORTFLAGS=-s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 --pre-js wrappers.js --pre-js wasm_struct.js
 
 IDL := $(wildcard *.idl)
@@ -40,14 +40,16 @@ foo:
 %.probe: %.js
 	node $< > $@
 
-wasm_struct.js: heatmap_struct.probe color_scales_struct.probe
+wasm_struct.js: heatmap_struct.probe color_scales_struct.probe htfc_struct.probe
 	./idlToJSON.js $@ $^
 
 color_scales.o: color_scales.h color_scales_struct.h
 
 heatmap.o: heatmap_struct.h color_scales.h color_scales_struct.h
 
-METHODS=fradix16-64.o fradix16.o stats.o color_scales.o heatmap.o
+htfc.o: htfc.h htfc_struct.h baos.h huffman.h
+
+METHODS=fradix16-64.o fradix16.o stats.o color_scales.o heatmap.o huffman.o baos.o htfc.o
 
 xena.js: $(METHODS) wrappers.js wasm_struct.js
 	$(CC) $(CFLAGS) -o $@ $(RTEXPORT) $(EXPORT) $(SORTFLAGS) $(METHODS)
