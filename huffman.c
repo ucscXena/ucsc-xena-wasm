@@ -307,7 +307,7 @@ void huffman_canonical_decode(struct decoder *decoder, uint8_t *buff8, int start
 		code = (j & byte) ? ((code << 1) | 1) : (code << 1); \
 		len +=1; \
 		if (code << 1 < base[len + 1]) { \
-			baos_push(out, symbols[offset[len] + code - base[len]]); \
+			baos_push(out, symbols[offset[len] + (uint32_t)(code - base[len])]); \
 			code = 0; \
 			len = -1; \
 		}
