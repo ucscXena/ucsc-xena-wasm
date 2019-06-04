@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <ctype.h>
 #include "baos.h"
 #include "huffman.h"
 #include "htfc_struct.h"
@@ -72,10 +73,13 @@ struct htfc {
 	int first_bin;
 #ifdef TREE
 	struct node *bin_huff;
+	struct node *bin_huff_case;
 #else
 	struct decoder decoder;
+	struct decoder decoder_case;
 #endif
 	struct node *header_huff;
+	struct node *header_huff_case;
 };
 
 void htfc_init(struct htfc *htfc, uint8_t *buff, size_t buff_length) {
@@ -91,22 +95,33 @@ void htfc_init(struct htfc *htfc, uint8_t *buff, size_t buff_length) {
 #ifdef TREE
 	htfc->bin_huff = huffman_new();
 	huffman_tree(htfc->bin_huff, buff, bin_dict_offset);
+	htfc->bin_huff_case = huffman_new();
+	huffman_tree(htfc->bin_huff_case, buff, bin_dict_offset);
 #else
 	huffman_decoder_init(&htfc->decoder, buff, bin_dict_offset); // for canonical decoder
+	huffman_decoder_init_case(&htfc->decoder_case, buff, bin_dict_offset); // for canonical decoder
 #endif
 	htfc->header_huff = huffman_new();
 	huffman_ht_tree(htfc->header_huff, buff, 8);
+	htfc->header_huff_case = huffman_new();
+	huffman_ht_tree_case(htfc->header_huff_case, buff, 8);
 	htfc->bin_offsets = bin_count_offset + 1;
 }
 
 void htfc_free(struct htfc *htfc) {
 #ifdef TREE
 	huffman_free(htfc->bin_huff);
+	huffman_free(htfc->bin_huff_case);
 #else
 	free(htfc->decoder.base);
 	free(htfc->decoder.offset);
+	free(htfc->decoder.symbols);
+	free(htfc->decoder_case.base);
+	free(htfc->decoder_case.offset);
+	free(htfc->decoder_case.symbols);
 #endif
 	huffman_free(htfc->header_huff);
+	huffman_free(htfc->header_huff_case);
 	free(htfc);
 }
 
@@ -135,13 +150,14 @@ void baos_push_int(struct baos *out, int i) {
 //     concat inner string
 // Need to change the API surface for huffman, and baos?
 // Maybe use something other than baos for header?
-void uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner) {
+void uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner, int ignore_case) {
+	struct node *header_huff = ignore_case ? htfc->header_huff_case : htfc->header_huff;
 	struct baos *out = baos_new(); // XXX smaller bin size, or alternate output API?
 
 	uint32_t *buff32 = (uint32_t *)htfc->buff;
 
 	int bin = 4 * htfc->first_bin + buff32[htfc->bin_offsets + bin_index];
-	int header_p = huffman_decode_to(htfc->header_huff, htfc->buff, bin, out);
+	int header_p = huffman_decode_to(header_huff, htfc->buff, bin, out);
 	size_t header_len = baos_count(out);
 	uint8_t *header = baos_to_array(out);
 	int rem = htfc->length % htfc->bin_size;
@@ -154,9 +170,10 @@ void uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner) {
 	struct baos *out2 = baos_new();
 
 #ifdef TREE
-	huffman_decode_range(htfc->bin_huff, htfc->buff, header_p, upper, out2);
+	huffman_decode_range(ignore_case ? htfc->bin_huff_case : htfc->bin_huff, htfc->buff, header_p, upper, out2);
 #else
-	huffman_canonical_decode(&htfc->decoder, htfc->buff, header_p, upper, out2);
+	struct decoder *decoder = ignore_case ? &htfc->decoder_case : &htfc->decoder;
+	huffman_canonical_decode(decoder, htfc->buff, header_p, upper, out2);
 #endif
 
 	int inner_len = baos_count(out2);
@@ -166,13 +183,13 @@ void uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner) {
 	free(header);
 }
 
-void htfc_search(struct htfc *htfc, int (*cmp)(const char *, const char *), char *substring, struct search_result *result) {
+void htfc_search(struct htfc *htfc, int (*cmp)(const char *, const char *), int ignore_case, char *substring, struct search_result *result) {
 	int matches = 0;
 	struct baos *out = baos_new();
 	struct inner inner;
 	int i;
 	for (i = 0; i < htfc->bin_count - 1; ++i) {
-		uncompress_bin(htfc, i, &inner);
+		uncompress_bin(htfc, i, &inner, ignore_case);
 		if (cmp(inner.current, substring)) {
 			baos_push_int(out, i * htfc->bin_size);
 		}
@@ -184,7 +201,7 @@ void htfc_search(struct htfc *htfc, int (*cmp)(const char *, const char *), char
 		}
 		free(inner.buff); // XXX this API is a bit wonky
 	}
-	uncompress_bin(htfc, i, &inner);
+	uncompress_bin(htfc, i, &inner, ignore_case);
 	if (cmp(inner.current, substring)) {
 		baos_push_int(out, i * htfc->bin_size);
 	}
@@ -212,15 +229,26 @@ void htfc_store(uint8_t *buff, uint32_t len) {
 }
 
 int contains(const char *a, const char *b) {
-	return strcasestr(a, b) ? 1 : 0;
+	return strstr(a, b) ? 1 : 0;
 }
 
 int exact(const char *a, const char *b) {
 	return strcmp(a, b) ? 0 : 1;
 }
 
-// result.matches must be freed after use
+// result.matches must be freed after use.
+// XXX substring is modified.
 struct search_result *htfc_search_store(char *substring, enum search_type type) {
-	htfc_search(htfc_cache, type == EXACT ? exact : contains, substring, &htfc_cache_result);
+	size_t len = strlen(substring);
+    if (type == CONTAINS) {
+		for (int i = 0; i < len; ++i) {
+			substring[i] = tolower(substring[i]);
+		}
+	}
+	htfc_search(htfc_cache,
+		type == EXACT ? exact : contains,
+		type == EXACT ? 0 : 1,
+		substring,
+		&htfc_cache_result);
 	return &htfc_cache_result;
 }

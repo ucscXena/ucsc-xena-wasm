@@ -1,8 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
-#ifdef HUFFMAN_DEBUG
 #include <ctype.h>
-#endif
 #include <byteswap.h>
 #include "baos.h"
 #include "huffman.h"
@@ -140,8 +138,12 @@ void dump_sym(uint8_t s) {
 }
 #endif
 
+int identity(int x) {
+    return x;
+}
+
 // for canonical decoder. offset, and right-justified base
-void huffman_decoder_init(struct decoder *decoder, uint8_t *buff8, int offset32) {
+void huffman_decoder_init_transform(struct decoder *decoder, uint8_t *buff8, int offset32, int (*transform)(int)) {
 	uint32_t *buff32 = (uint32_t *)buff8;
 	int len = buff32[offset32];
 	uint64_t *base = malloc(sizeof(*base) * (len + 1));
@@ -159,7 +161,20 @@ void huffman_decoder_init(struct decoder *decoder, uint8_t *buff8, int offset32)
 	base[i] = code; // needed in the decoder for termination
 	decoder->base = base;
 	decoder->offset = offset;
-	decoder->symbols = buff8 + 4 * (offset32 + 1 + len);
+	uint8_t *symbols = buff8 + 4 * (offset32 + 1 + len);
+	// XXX is offs the right number?
+	decoder->symbols = malloc(offs);
+	for (int i = 0; i < offs; ++i) {
+		decoder->symbols[i] = transform(symbols[i]);
+	}
+}
+
+void huffman_decoder_init(struct decoder *decoder, uint8_t *buff8, int offset32) {
+    huffman_decoder_init_transform(decoder, buff8, offset32, identity);
+}
+
+void huffman_decoder_init_case(struct decoder *decoder, uint8_t *buff8, int offset32) {
+    huffman_decoder_init_transform(decoder, buff8, offset32, tolower);
 }
 
 // for the ONE-SHIFT algorithm, below
@@ -189,7 +204,8 @@ void huffman_decoder_init2(struct decoder *decoder, uint8_t *buff8, int offset32
 }
 #endif
 
-struct node *huffman_ht_tree(struct node *root, uint8_t *buff8, int offset8) {
+struct node *huffman_ht_tree_transform(struct node *root, uint8_t *buff8, int offset8,
+	    int (*transform)(int)) {
 	uint32_t *buff32 = (uint32_t *)buff8;
 	int offset32 = offset8 / 4;
 	int len = buff32[offset32];
@@ -197,9 +213,17 @@ struct node *huffman_ht_tree(struct node *root, uint8_t *buff8, int offset8) {
 	int symbols = 4 * (1 + 2 * len);
 	for (int j = 0; j < len; ++j) {
 		insert(root, buff32[offset32 + codes + 2 * j],
-			buff32[offset32 + codes + 2 * j + 1], buff8[offset8 + symbols + j]);
+			buff32[offset32 + codes + 2 * j + 1], transform(buff8[offset8 + symbols + j]));
 	}
 	return root;
+}
+
+struct node *huffman_ht_tree(struct node *root, uint8_t *buff8, int offset8) {
+    return huffman_ht_tree_transform(root, buff8, offset8, identity);
+}
+
+struct node *huffman_ht_tree_case(struct node *root, uint8_t *buff8, int offset8) {
+    return huffman_ht_tree_transform(root, buff8, offset8, tolower);
 }
 
 int huffman_decode_to(struct node *root, uint8_t *buff8, int start, struct baos *out) {
