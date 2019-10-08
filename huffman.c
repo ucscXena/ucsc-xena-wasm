@@ -1,9 +1,324 @@
+// _GNU_SOURCE is for qsort_r
+#define _GNU_SOURCE
 #include <stdint.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <byteswap.h>
+#include <stdio.h>
+#include <string.h>
 #include "baos.h"
 #include "huffman.h"
+#include "queue.h"
+
+void update_freqs(int *freqs, char *s) {
+	while (*s) {
+		freqs[*s++]++;
+	}
+	freqs[*s]++; // count the null
+}
+
+int *byte_freqs(int count, char **s) {
+	int *freqs = calloc(256, sizeof(int));
+	for (int i = 0; i < count; i++) {
+		update_freqs(freqs, *s++);
+	}
+	return freqs;
+}
+
+int gt(const void *a, const void *b, void *vfreqs) {
+	int *freqs = vfreqs;
+	int va = freqs[*(int *)a];
+	int vb = freqs[*(int *)b];
+	return va > vb ? 1 :
+		vb > va ? -1 :
+		0;
+}
+
+enum encode_node_type {SYMBOL, MERGED};
+
+struct encode_tree {
+	int priority;
+	enum encode_node_type type;
+	union {
+		struct {
+			struct encode_tree *left;
+			struct encode_tree *right;
+		} child;
+		char symbol;
+	};
+};
+
+void encode_tree_dump_n(struct encode_tree *tree, int depth) {
+	if (tree) {
+		if (tree->type == MERGED) {
+			printf("%*c merged %d\n", depth, ' ', tree->priority);
+			encode_tree_dump_n(tree->child.left, depth + 1);
+			encode_tree_dump_n(tree->child.right, depth + 1);
+		} else {
+			printf("%*c symbol %d %d (%c)\n", depth, ' ', tree->priority, tree->symbol, isprint(tree->symbol) ? tree->symbol : ' ');
+		}
+	}
+}
+
+void encode_tree_dump(struct encode_tree *tree) {
+	encode_tree_dump_n(tree, 1);
+}
+
+struct encode_tree *merge(struct encode_tree *a, struct encode_tree *b)  {
+	struct encode_tree *m = malloc(sizeof(struct encode_tree));
+	m->priority = a->priority + b->priority;
+	m->type = MERGED;
+	m->child.left = a;
+	m->child.right = b;
+	return m;
+}
+
+struct encode_tree *symbol(char s, int priority) {
+	struct encode_tree *m = malloc(sizeof(struct encode_tree));
+	m->priority = priority;
+	m->type = SYMBOL;
+	m->symbol = s;
+	return m;
+}
+
+struct encode_tree *take_lowest(struct array_queue *a, struct array_queue *b) {
+	// failure mode is a is null
+	if (!array_queue_count(b)) {
+		return array_queue_take(a);
+	}
+	if (!array_queue_count(a)) {
+		return array_queue_take(b);
+	}
+	int va = ((struct encode_tree *)(array_queue_peek(a)))->priority;
+	int vb = ((struct encode_tree *)(array_queue_peek(b)))->priority;
+	return vb >= va ?
+		array_queue_take(a) :
+		array_queue_take(b);
+}
+
+// Encoding tree. Different from decoding tree.
+// Needs to hold a symbol, or a merged node.
+struct encode_tree *encode_tree_build(int *freqs) {
+	int idx[NBYTE];
+	for (int i = 0; i < NBYTE; ++i) {
+		idx[i] = i;
+	}
+	qsort_r(idx, NBYTE, sizeof(int), gt, freqs);
+	struct array_queue *leaves = array_queue_new(NBYTE);
+	struct array_queue *nodes = array_queue_new(NBYTE);
+	for (int i = 0; i < NBYTE; ++i) {
+		if (freqs[idx[i]]) {
+			array_queue_add(leaves, symbol(idx[i], freqs[idx[i]]));
+		}
+	}
+	// algorithm is to pull the two lowest values, merge, and repeat
+	// until all are merged (i.e. there is one node)
+	while (array_queue_count(leaves) + array_queue_count(nodes) > 1) {
+		struct encode_tree *a = take_lowest(leaves, nodes);
+		struct encode_tree *b = take_lowest(leaves, nodes);
+		array_queue_add(nodes, merge(a, b));
+	}
+	struct encode_tree *tree = array_queue_take(nodes);
+	array_queue_free(nodes);
+	array_queue_free(leaves);
+	return tree;
+}
+
+void encode_tree_free(struct encode_tree *tree) {
+	if (tree) {
+		if (tree->type == MERGED) {
+			encode_tree_free(tree->child.left);
+			encode_tree_free(tree->child.right);
+		}
+		free(tree);
+	}
+}
+
+struct queue *find_depth_n(struct queue *nodes, struct queue *acc) {
+	if (!queue_count(nodes)) {
+		queue_free(nodes);
+		return acc;
+	}
+	struct queue *symbols = queue_new();
+	struct queue *merged = queue_new();
+	struct encode_tree *n;
+	while (n = queue_take(nodes)) {
+		if (n->type == MERGED) {
+			queue_add(merged, n->child.left);
+			queue_add(merged, n->child.right);
+		} else {
+			queue_add(symbols, (void *)(size_t)n->symbol);
+		}
+	}
+	queue_add(acc, symbols);
+	queue_free(nodes);
+	return find_depth_n(merged, acc);
+}
+
+// group and order symbols by depth.
+struct queue *find_depth(struct encode_tree *tree) {
+	struct queue *nodes = queue_new();
+	struct queue *acc = queue_new();
+	queue_add(nodes, tree);
+	return find_depth_n(nodes, acc);
+}
+
+struct huffman_code {
+	int length;
+	long code;
+};
+
+uint8_t *queue_to_chars(struct queue *q) {
+	int n = queue_count(q);
+	uint8_t *chars = malloc(n);
+	while (n--) {
+		chars[n] = (size_t)queue_take(q);
+	}
+	queue_free(q);
+	return chars;
+}
+
+int cmp_char(const void *a, const void *b) {
+	uint8_t x = *(uint8_t *)a;
+	uint8_t y = *(uint8_t *)b;
+	return x > y ? 1 :
+		y > x ? -1 :
+		0;
+}
+
+struct canonical {
+	int n;
+	int *lens;
+	uint8_t *symbols;
+};
+
+struct huffman_encoder {
+	struct canonical canonical;
+	struct huffman_code dict[NBYTE];
+};
+
+struct huffman_encoder *huffman_encoder_new(int n) {
+	struct huffman_encoder *codes = calloc(1, sizeof(struct huffman_encoder));
+	codes->canonical.n = n;
+	codes->canonical.lens = calloc(n, sizeof(int));
+	codes->canonical.symbols = NULL;
+	return codes;
+}
+
+void huffman_serialize(struct baos *out, struct huffman_encoder *huff) {
+	struct canonical *c = &huff->canonical;
+	int n = c->n;
+	int total = 0;
+	baos_push_int(out, n);
+	for (int i = 0; i < n; ++i) {
+		int len = c->lens[i];
+		baos_push_int(out, len);
+		total += len;
+	}
+	for (int i = 0; i < total; ++i) {
+		baos_push(out, c->symbols[i]);
+	}
+}
+
+void huffman_encoder_free(struct huffman_encoder *enc) {
+	free(enc->canonical.lens);
+	free(enc->canonical.symbols);
+	free(enc);
+}
+
+// returns list of [{length, symbols: [{symbol, code}]}]
+// We need two things from this process: the dict for decoding,
+// and the hash for encoding. Hash for encoding is byte -> {symbol, length}.
+// This can just be an array. Decode dict can be just lens
+// and symbols. We can reconstruct the decode tree from that.
+struct huffman_encoder *encoder(struct queue *depths) {
+	struct queue *symbols;
+	int depth = 1;
+	int code = 0;
+	struct huffman_encoder *encoder = huffman_encoder_new(queue_count(depths));
+	struct huffman_code *dict = encoder->dict;
+	int total = 0;
+	while (symbols = queue_take(depths)) {
+		int n;
+		if (n = queue_count(symbols)) {
+			uint8_t *syms = queue_to_chars(symbols);
+			qsort(syms, n, 1, cmp_char);
+			for (int i = 0; i < n; ++i) {
+				dict[syms[i]].length = depth;
+				dict[syms[i]].code = code++;
+			}
+			encoder->canonical.lens[depth - 1] = n;
+			total += n;
+			encoder->canonical.symbols = realloc(encoder->canonical.symbols, total);
+			memcpy(encoder->canonical.symbols + total - n, syms, n);
+			free(syms);
+		} else {
+			queue_free(symbols);
+		}
+		depth++;
+		code <<= 1;
+	}
+	queue_free(depths);
+	return encoder;
+}
+
+// build encoder for a set of strings (including the nulls);
+struct huffman_encoder *strings_encoder(int count, char **s) {
+	int *freqs = byte_freqs(count, s);
+	struct encode_tree *t = encode_tree_build(freqs);
+	struct queue *depths = find_depth(t);
+	encode_tree_free(t);
+	free(freqs);
+	return encoder(depths);
+}
+
+// Is this the right API? This emits some extra bits at the end, due to use of baos.
+void encode_bytes(struct baos *output, struct huffman_encoder *enc, int len, uint8_t *in) {
+	struct huffman_code *dict = enc->dict;
+	long out = 0;
+	int m = 0;
+	for (int i = 0; i < len; ++i) {
+		struct huffman_code *c = dict + in[i];
+		long code = c->code;
+		int length = c->length;
+		out |= code << (64 - m - length);
+		m += length;
+		if (m >= 8) {
+			baos_push(output, (out >> 56) & 0xff);
+			if (m >= 16) {
+				baos_push(output, (out >> 48) & 0xff);
+				if (m >= 24) {
+					baos_push(output, (out >> 40) & 0xff);
+					if (m >= 32) {
+						baos_push(output, (out >> 32) & 0xff);
+						if (m >= 40) {
+							baos_push(output, (out >> 24) & 0xff);
+							if (m >= 48) {
+								baos_push(output, (out >> 16) & 0xff);
+								if (m >= 56) {
+									baos_push(output, (out >> 8) & 0xff);
+									if (m == 64) {
+										baos_push(output, out & 0xff);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if (m >= 8) {
+			int shift = 8 * (m / 8);
+			out <<= shift;
+			m -= shift;
+		}
+	}
+	if (m != 0) {
+		baos_push(output, (out >> 56) & 0xff);
+	}
+}
+
+// decode tree
 
 enum node_type {LEAF, INNER};
 
@@ -167,6 +482,12 @@ void huffman_decoder_init_transform(struct decoder *decoder, uint8_t *buff8, int
 	for (int i = 0; i < offs; ++i) {
 		decoder->symbols[i] = transform(symbols[i]);
 	}
+}
+
+void huffman_decoder_free(struct decoder *decoder) {
+	free(decoder->base);
+	free(decoder->offset);
+	free(decoder->symbols);
 }
 
 void huffman_decoder_init(struct decoder *decoder, uint8_t *buff8, int offset32) {
@@ -348,7 +669,7 @@ void huffman_canonical_decode(struct decoder *decoder, uint8_t *buff8, int start
 
 // ONE-SHIFT algorithm from Moffat and Turpin, 1997. Should be faster
 // than CANONICAL-DECODE, above, but it's not. Need to debug further.
-// It should be possible to easily extend this to use a table too speed
+// It should be possible to easily extend this to use a table to speed
 // up the initial length calculation, as per the paper, but it's unclear
 // if the speed is currently limited by the length calc or managing the
 // left-justified bit register.

@@ -16,9 +16,15 @@ test_baos_objects=baos.o test_baos.o
 
 test_baos: $(test_baos_objects)
 
+huffman.o: huffman.c huffman.h baos.h queue.h
+
 test_htfc_objects=htfc.o huffman.o baos.o test_htfc.o
 
 test_htfc: $(test_htfc_objects)
+
+test_queue: queue.o test_queue.o
+
+test_huffman: huffman.o queue.o baos.o test_huffman.o
 
 RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue"]'
 EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian","_get_color_linear","_get_color_log2","_region_color_linear_test","_draw_subcolumn","_tally_domains","_test_scale_method","_htfc_search_store","_htfc_store"]'

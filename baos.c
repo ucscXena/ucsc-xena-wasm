@@ -43,6 +43,13 @@ void baos_push(struct baos *baos, uint8_t b) {
 	}
 }
 
+void baos_push_int(struct baos *baos, uint32_t i) {
+	baos_push(baos, i & 0xff);
+	baos_push(baos, (i >> 8) & 0xff);
+	baos_push(baos, (i >> 16) & 0xff);
+	baos_push(baos, (i >> 24) & 0xff);
+}
+
 static struct list *reverse(struct list *list) {
 	struct list *rev = NULL;
 	struct list *next;
