@@ -5,7 +5,6 @@
 #include <ctype.h>
 #include "baos.h"
 #include "huffman.h"
-#include "htfc_struct.h"
 #include "htfc.h"
 
 struct inner {

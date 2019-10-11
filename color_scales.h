@@ -1,3 +1,7 @@
+#ifndef XENA_COLOR_SCALES_H
+#define XENA_COLOR_SCALES_H
+
+#include <stdint.h>
 #include "color_scales_struct.h"
 
 #define R(x) (x & 0xFF)
@@ -15,3 +19,5 @@ typedef union ctx ctx;
 typedef uint32_t color_fn(ctx, double);
 
 color_fn *get_method(enum type);
+
+#endif //XENA_COLOR_SCALES_H

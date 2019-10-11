@@ -1,3 +1,8 @@
+#ifndef XENA_HUFFMAN_H
+#define XENA_HUFFMAN_H
+
+#include <stdint.h>
+#include "baos.h"
 
 struct node;
 
@@ -36,3 +41,5 @@ struct huffman_encoder *strings_encoder(int count, char **s);
 void huffman_serialize(struct baos *out, struct huffman_encoder *huff);
 void huffman_encoder_free(struct huffman_encoder *enc);
 void encode_bytes(struct baos *output, struct huffman_encoder *enc, int len, uint8_t *in);
+
+#endif //XENA_HUFFMAN_H
