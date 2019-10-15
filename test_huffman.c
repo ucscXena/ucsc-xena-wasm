@@ -1,24 +1,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <check.h>
 #include "baos.h"
 #include "huffman.h"
 
-char *ok(int pass) {
-	return pass ? "✓" : "✗";
-}
-
-int main(int argc, char *argv[]) {
+START_TEST(test_byte_freqs)
+{
 	char *s[] = {"foo", "bar"};
 	int *freqs = byte_freqs(2, s);
-	printf("byte_freqs\n");
-	printf("input [\"foo\", \"bar\"]\n");
-	printf("%s 0: %d expected 2\n", ok(freqs[0] == 2), freqs[0]);
-	printf("%s a: %d expected 1\n", ok(freqs['a'] == 1), freqs['a']);
-	printf("%s b: %d expected 1\n", ok(freqs['b'] == 1), freqs['b']);
-	printf("%s f: %d expected 1\n", ok(freqs['f'] == 1), freqs['f']);
-	printf("%s o: %d expected 2\n", ok(freqs['o'] == 2), freqs['o']);
-	printf("%s r: %d expected 1\n", ok(freqs['r'] == 1), freqs['r']);
+	ck_assert_int_eq(freqs[0], 2);
+	ck_assert_int_eq(freqs['a'], 1);
+	ck_assert_int_eq(freqs['b'], 1);
+	ck_assert_int_eq(freqs['f'], 1);
+	ck_assert_int_eq(freqs['o'], 2);
+	ck_assert_int_eq(freqs['r'], 1);
 	for (int i = 0; i < NBYTE; ++i) {
 		switch (i) {
 			case 0:
@@ -29,19 +25,27 @@ int main(int argc, char *argv[]) {
 			case 'r':
 				continue;
 			default:
-				if (freqs[i] != 0) {
-					printf("%s %d: %d expected 0\n", ok(freqs[i] == 0), i, freqs[i]);
-				}
+				ck_assert_int_eq(freqs[i], 0);
 		}
 	}
+	free(freqs);
+}
+END_TEST
 
-	struct encode_tree *t;
-	t = encode_tree_build(freqs);
-	//encode_tree_dump(t);
+START_TEST(test_encode_tree)
+{
+	char *s[] = {"foo", "bar"};
+	int *freqs = byte_freqs(2, s);
+	struct encode_tree *t = encode_tree_build(freqs);
+	// just test that we don't throw
 	encode_tree_free(t);
 	free(freqs);
+}
+END_TEST
 
-
+START_TEST(test_encode_decode)
+{
+	char *s[] = {"foo", "bar"};
 	struct decoder dec;
 	struct huffman_encoder *enc = strings_encoder(2, s);
 	{
@@ -65,10 +69,18 @@ int main(int argc, char *argv[]) {
 	char *result = baos_to_array(result_buff);
 
 	for (int i = 0; i < sizeof(in) / sizeof(in[0]); ++i) {
-		printf("%s %02x (%c) expected %02x (%c)\n", ok(result[i] == in[i]), result[i], result[i], in[i], in[i]);
+		ck_assert_msg(result[i] == in[i],
+				"Assertion failed: %02x (%c) expected %02x (%c)",
+				result[i], result[i], in[i], in[i]);
 	}
 	free(out);
 	free(result);
 	huffman_decoder_free(&dec);
 }
+END_TEST
 
+void add_huffman(TCase *tc) {
+	tcase_add_test(tc, test_byte_freqs);
+	tcase_add_test(tc, test_encode_tree);
+	tcase_add_test(tc, test_encode_decode);
+}

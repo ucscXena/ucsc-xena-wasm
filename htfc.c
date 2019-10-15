@@ -215,6 +215,41 @@ void htfc_search(struct htfc *htfc, int (*cmp)(const char *, const char *), int 
 	result->matches = (uint32_t *)baos_to_array(out);
 }
 
+struct htfc_iter {
+	struct htfc *htfc;
+	struct inner inner;
+	int i;
+};
+
+struct htfc_iter *htfc_iter_init(struct htfc *htfc) {
+	struct htfc_iter *iter = calloc(1, sizeof(struct htfc_iter));
+	iter->htfc = htfc;
+	return iter;
+}
+
+char *htfc_iter_next(struct htfc_iter *iter) {
+	if (iter->i < iter->htfc->length) {
+		if (iter->i % iter->htfc->bin_size == 0) {
+			if (iter->inner.buff) {
+				free(iter->inner.buff);
+			}
+			uncompress_bin(iter->htfc, iter->i / iter->htfc->bin_size, &iter->inner, 0);
+		} else {
+			inner_next(&iter->inner);
+		}
+		iter->i++;
+		return iter->inner.current;
+	}
+	return NULL;
+}
+
+void htfc_iter_free(struct htfc_iter *iter) {
+	if (iter->inner.buff) {
+		free(iter->inner.buff);
+	}
+	free(iter);
+}
+
 // singletons, for xena client
 static struct htfc *htfc_cache = NULL;
 static struct search_result htfc_cache_result;
@@ -227,11 +262,11 @@ void htfc_store(uint8_t *buff, uint32_t len) {
 	htfc_cache = htfc_new(buff, len);
 }
 
-int contains(const char *a, const char *b) {
+static int contains(const char *a, const char *b) {
 	return strstr(a, b) ? 1 : 0;
 }
 
-int exact(const char *a, const char *b) {
+static int exact(const char *a, const char *b) {
 	return strcmp(a, b) ? 0 : 1;
 }
 

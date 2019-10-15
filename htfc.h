@@ -15,4 +15,8 @@ void htfc_search(struct htfc *, int (*cmp)(const char *a, const char *b), int, c
 
 void htfc_free(struct htfc *);
 
+struct htfc_iter *htfc_iter_init(struct htfc *htfc);
+char *htfc_iter_next(struct htfc_iter *iter);
+void htfc_iter_free(struct htfc_iter *iter);
+
 #endif //XENA_HTFC_H
