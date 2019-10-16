@@ -112,12 +112,8 @@ void htfc_free(struct htfc *htfc) {
 	huffman_free(htfc->bin_huff);
 	huffman_free(htfc->bin_huff_case);
 #else
-	free(htfc->decoder.base);
-	free(htfc->decoder.offset);
-	free(htfc->decoder.symbols);
-	free(htfc->decoder_case.base);
-	free(htfc->decoder_case.offset);
-	free(htfc->decoder_case.symbols);
+	huffman_decoder_free(&htfc->decoder);
+	huffman_decoder_free(&htfc->decoder_case);
 #endif
 	huffman_free(htfc->header_huff);
 	huffman_free(htfc->header_huff_case);
@@ -132,14 +128,6 @@ struct htfc *htfc_new(uint8_t *buff, size_t len) {
 
 int htfc_count(struct htfc *htfc) {
 	return htfc->length;
-}
-
-// XXX this looks slow
-void baos_push_int(struct baos *out, int i) {
-	baos_push(out, i & 0xff);
-	baos_push(out, (i >> 8) & 0xff);
-	baos_push(out, (i >> 16) & 0xff);
-	baos_push(out, (i >> 24) & 0xff);
 }
 
 // XXX Can we avoid unnecessary allocations? E.g. reuse buffers when possible.
