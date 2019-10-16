@@ -8,8 +8,8 @@ CFLAGS=--std=gnu99 -O3
 # generate dependencies
 #
 SRCS= baos.c bench.c color_scales.c fradix16-64.c fradix16.c fradix.c heatmap.c \
-	htfc.c htfcz.c huffman.c queue.c radix.c roaring.c roaring_test.c stats.c \
-	test_baos.c test_htfc.c test_huffman.c test_queue.c test_stats.c test.c
+	hfc.c htfc.c hfcz.c htfcz.c huffman.c queue.c radix.c roaring.c roaring_test.c stats.c \
+	test_baos.c test_hfc.c test_htfc.c test_huffman.c test_queue.c test_stats.c test.c
 
 DEPDIR := .deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
@@ -33,7 +33,7 @@ bench_objects=radix.o fradix.o fradix16.o fradix16-64.o bench.o
 
 bench: $(bench_objects)
 
-test: test.o test_baos.o baos.o test_queue.o queue.o test_stats.o stats.o fradix16.o test_huffman.o huffman.o test_htfc.o htfc.o
+test: test.o test_baos.o baos.o test_queue.o queue.o test_stats.o stats.o fradix16.o test_huffman.o huffman.o test_htfc.o htfc.o test_hfc.o hfc.o
 		$(CC) $(CFLAGS) -o $@ $^ -lcheck -lm -lrt -lpthread -lsubunit
 
 RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue"]'
@@ -52,13 +52,16 @@ IDL_DERIVED := $(IDL:.idl=.js) $(IDL:.idl=.c) $(IDL:.idl=.h) $(IDL:.idl=.wasm) $
 %.probe: %.js
 	node $< > $@
 
-wasm_struct.js: heatmap_struct.probe color_scales_struct.probe htfc_struct.probe
+wasm_struct.js: heatmap_struct.probe color_scales_struct.probe htfc_struct.probe hfc_struct.probe
 	./idlToJSON.js $@ $^
 
 htfcz: htfcz.o htfc.o baos.o huffman.o queue.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 METHODS=fradix16-64.o fradix16.o stats.o color_scales.o heatmap.o huffman.o baos.o htfc.o
+hfcz: hfcz.o hfc.o baos.o huffman.o queue.o
+	$(CC) $(CFLAGS) -o $@ $^
+
 
 xena.js: $(METHODS) wrappers.js wasm_struct.js
 	$(CC) $(CFLAGS) -o $@ $(RTEXPORT) $(EXPORT) $(SORTFLAGS) $(METHODS)
@@ -68,7 +71,7 @@ bench.html: bench
 	$(CC) $(CFLAGS) bench.bc $(MEMOPTS) -o bench.html
 
 clean:
-	rm -f *.map *.wast bench heatmap_struct.h color_scales_struct.h  *.o *.wasm *.bc htfcz  wasm_struct.js xena.js bench bench.html test $(IDL_DERIVED)
+	rm -f *.map *.wast bench heatmap_struct.h color_scales_struct.h  *.o *.wasm *.bc hfcz htfcz wasm_struct.js xena.js bench bench.html test $(IDL_DERIVED)
 
 
 # include dependencies

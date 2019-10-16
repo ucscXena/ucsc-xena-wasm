@@ -59,7 +59,7 @@ cleanup:
 
 START_TEST(test_basic)
 {
-	FILE *fp = fopen("testdict", "r");
+	FILE *fp = fopen("htfc-basic-test.dict", "r");
 	uint8_t *buff = malloc(BUFSIZE);
 	int len = fread(buff, 1, BUFSIZE, fp);
 	struct htfc *htfc = htfc_new(buff, len);

@@ -137,7 +137,7 @@ int htfc_count(struct htfc *htfc) {
 //     concat inner string
 // Need to change the API surface for huffman, and baos?
 // Maybe use something other than baos for header?
-void uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner, int ignore_case) {
+static void uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner, int ignore_case) {
 	struct node *header_huff = ignore_case ? htfc->header_huff_case : htfc->header_huff;
 	struct baos *out = baos_new(); // XXX smaller bin size, or alternate output API?
 
