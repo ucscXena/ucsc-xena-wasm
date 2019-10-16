@@ -1,5 +1,3 @@
-// _GNU_SOURCE is for qsort_r
-#define _GNU_SOURCE
 #include <stdint.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -25,10 +23,11 @@ int *byte_freqs(int count, char **s) {
 	return freqs;
 }
 
-int gt(const void *a, const void *b, void *vfreqs) {
-	int *freqs = vfreqs;
-	int va = freqs[*(int *)a];
-	int vb = freqs[*(int *)b];
+// XXX not thread safe. Work-around for lack of qsort_r.
+static int *gt_freqs = NULL;
+static int gt(const void *a, const void *b) {
+	int va = gt_freqs[*(int *)a];
+	int vb = gt_freqs[*(int *)b];
 	return va > vb ? 1 :
 		vb > va ? -1 :
 		0;
@@ -103,7 +102,8 @@ struct encode_tree *encode_tree_build(int *freqs) {
 	for (int i = 0; i < NBYTE; ++i) {
 		idx[i] = i;
 	}
-	qsort_r(idx, NBYTE, sizeof(int), gt, freqs);
+	gt_freqs = freqs;
+	qsort(idx, NBYTE, sizeof(int), gt);
 	struct array_queue *leaves = array_queue_new(NBYTE);
 	struct array_queue *nodes = array_queue_new(NBYTE);
 	for (int i = 0; i < NBYTE; ++i) {
@@ -142,7 +142,7 @@ struct queue *find_depth_n(struct queue *nodes, struct queue *acc) {
 	struct queue *symbols = queue_new();
 	struct queue *merged = queue_new();
 	struct encode_tree *n;
-	while (n = queue_take(nodes)) {
+	while ((n = queue_take(nodes))) {
 		if (n->type == MERGED) {
 			queue_add(merged, n->child.left);
 			queue_add(merged, n->child.right);
@@ -238,9 +238,9 @@ struct huffman_encoder *encoder(struct queue *depths) {
 	struct huffman_encoder *encoder = huffman_encoder_new(queue_count(depths));
 	struct huffman_code *dict = encoder->dict;
 	int total = 0;
-	while (symbols = queue_take(depths)) {
+	while ((symbols = queue_take(depths))) {
 		int n;
-		if (n = queue_count(symbols)) {
+		if ((n = queue_count(symbols))) {
 			uint8_t *syms = queue_to_chars(symbols);
 			qsort(syms, n, 1, cmp_char);
 			for (int i = 0; i < n; ++i) {
@@ -275,7 +275,7 @@ struct huffman_encoder *strings_encoder(int count, char **s) {
 // Is this the right API? This emits some extra bits at the end, due to use of baos.
 void encode_bytes(struct baos *output, struct huffman_encoder *enc, int len, uint8_t *in) {
 	struct huffman_code *dict = enc->dict;
-	long out = 0;
+	uint64_t out = 0;
 	int m = 0;
 	for (int i = 0; i < len; ++i) {
 		struct huffman_code *c = dict + in[i];
