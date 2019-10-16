@@ -55,6 +55,8 @@ IDL_DERIVED := $(IDL:.idl=.js) $(IDL:.idl=.c) $(IDL:.idl=.h) $(IDL:.idl=.wasm) $
 wasm_struct.js: heatmap_struct.probe color_scales_struct.probe htfc_struct.probe
 	./idlToJSON.js $@ $^
 
+htfcz: htfcz.o htfc.o baos.o huffman.o queue.o
+	$(CC) $(CFLAGS) -o $@ $^
 
 METHODS=fradix16-64.o fradix16.o stats.o color_scales.o heatmap.o huffman.o baos.o htfc.o
 
@@ -66,7 +68,7 @@ bench.html: bench
 	$(CC) $(CFLAGS) bench.bc $(MEMOPTS) -o bench.html
 
 clean:
-	rm -f *.map *.wast bench heatmap_struct.h color_scales_struct.h  *.o *.wasm *.bc wasm_struct.js xena.js bench bench.html test_stats test_htfc test_baos $(IDL_DERIVED)
+	rm -f *.map *.wast bench heatmap_struct.h color_scales_struct.h  *.o *.wasm *.bc htfcz  wasm_struct.js xena.js bench bench.html test $(IDL_DERIVED)
 
 
 # include dependencies
