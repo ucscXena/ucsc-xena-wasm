@@ -16,6 +16,7 @@ START_TEST(test_array_queue)
 	array_queue_add(aq, (void *)3);
 	array_queue_add(aq, (void *)4);
 	ck_assert_int_eq(array_queue_count(aq), 4);
+	array_queue_free(aq);
 }
 END_TEST
 
@@ -33,6 +34,7 @@ START_TEST(test_queue)
 	queue_add(aq, (void *)3);
 	queue_add(aq, (void *)4);
 	ck_assert_int_eq(queue_count(aq), 4);
+	queue_free(aq);
 }
 END_TEST
 

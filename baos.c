@@ -91,6 +91,7 @@ uint8_t *baos_to_array(struct baos *baos) {
 			list = next;
 		}
 	} else {
+		free(baos->bins);
 		out = NULL;
 	}
 

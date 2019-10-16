@@ -53,6 +53,7 @@ cleanup:
 	htfc_iter_free(iter);
 	htfc_free(htfc);
 	free(buff);
+	free(o);
 	fclose(fp);
 }
 
