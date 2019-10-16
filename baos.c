@@ -43,6 +43,12 @@ void baos_push(struct baos *baos, uint8_t b) {
 	}
 }
 
+void baos_copy(struct baos *baos, uint8_t *p, int start, int end) {
+	for (int i = start; i < end; ++i) {
+		baos_push(baos, p[i]);
+	}
+}
+
 void baos_push_int(struct baos *baos, uint32_t i) {
 	baos_push(baos, i & 0xff);
 	baos_push(baos, (i >> 8) & 0xff);
