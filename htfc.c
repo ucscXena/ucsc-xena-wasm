@@ -70,13 +70,8 @@ struct htfc {
 	int bin_offsets;
 	int bin_count; // drop this?
 	int first_bin;
-#ifdef TREE
-	struct node *bin_huff;
-	struct node *bin_huff_case;
-#else
 	struct decoder decoder;
 	struct decoder decoder_case;
-#endif
 	struct node *header_huff;
 	struct node *header_huff_case;
 };
@@ -91,15 +86,8 @@ void htfc_init(struct htfc *htfc, uint8_t *buff, size_t buff_length) {
 	int bin_count_offset = bin_dict_offset + huff_dict_len(buff32, bin_dict_offset); // 32
 	htfc->bin_count = buff32[bin_count_offset];
 	htfc->first_bin = bin_count_offset + htfc->bin_count + 1; // 32
-#ifdef TREE
-	htfc->bin_huff = huffman_new();
-	huffman_tree(htfc->bin_huff, buff, bin_dict_offset);
-	htfc->bin_huff_case = huffman_new();
-	huffman_tree(htfc->bin_huff_case, buff, bin_dict_offset);
-#else
 	huffman_decoder_init(&htfc->decoder, buff, bin_dict_offset); // for canonical decoder
 	huffman_decoder_init_case(&htfc->decoder_case, buff, bin_dict_offset); // for canonical decoder
-#endif
 	htfc->header_huff = huffman_new();
 	huffman_ht_tree(htfc->header_huff, buff, 8);
 	htfc->header_huff_case = huffman_new();
@@ -108,13 +96,8 @@ void htfc_init(struct htfc *htfc, uint8_t *buff, size_t buff_length) {
 }
 
 void htfc_free(struct htfc *htfc) {
-#ifdef TREE
-	huffman_free(htfc->bin_huff);
-	huffman_free(htfc->bin_huff_case);
-#else
 	huffman_decoder_free(&htfc->decoder);
 	huffman_decoder_free(&htfc->decoder_case);
-#endif
 	huffman_free(htfc->header_huff);
 	huffman_free(htfc->header_huff_case);
 	free(htfc);
@@ -156,12 +139,8 @@ static void uncompress_bin(struct htfc *htfc, int bin_index, struct inner *inner
 		4 * htfc->first_bin + buff32[htfc->bin_offsets + 1 + bin_index];
 	struct baos *out2 = baos_new();
 
-#ifdef TREE
-	huffman_decode_range(ignore_case ? htfc->bin_huff_case : htfc->bin_huff, htfc->buff, header_p, upper, out2);
-#else
 	struct decoder *decoder = ignore_case ? &htfc->decoder_case : &htfc->decoder;
 	huffman_canonical_decode(decoder, htfc->buff, header_p, upper, out2);
-#endif
 
 	int inner_len = baos_count(out2);
 	uint8_t *out2_arr = baos_to_array(out2);
