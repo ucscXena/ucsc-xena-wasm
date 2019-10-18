@@ -7,18 +7,20 @@
 #include "baos.h"
 #include "huffman.h"
 #include "queue.h"
+#include "bytes.h"
 
-void update_freqs(int *freqs, char *s) {
-	while (*s) {
+void update_freqs(int *freqs, uint8_t *s, size_t len) {
+	while (len--) {
 		freqs[*s++]++;
 	}
-	freqs[*s]++; // count the null
 }
 
-int *byte_freqs(int count, char **s) {
+int *byte_freqs(struct queue *q) {
 	int *freqs = calloc(256, sizeof(int));
+	int count = queue_count(q);
 	for (int i = 0; i < count; i++) {
-		update_freqs(freqs, *s++);
+		struct bytes *b = queue_take(q);
+		update_freqs(freqs, b->bytes, b->len);
 	}
 	return freqs;
 }
@@ -218,6 +220,10 @@ void huffman_serialize(struct baos *out, struct huffman_encoder *huff) {
 	for (int i = 0; i < total; ++i) {
 		baos_push(out, c->symbols[i]);
 	}
+	// extend to word boundary
+	for (int i = 0; i < 4 * ((total + 3) / 4) - total; ++i) {
+		baos_push(out, 0);
+	}
 }
 
 void huffman_encoder_free(struct huffman_encoder *enc) {
@@ -262,9 +268,25 @@ struct huffman_encoder *encoder(struct queue *depths) {
 	return encoder;
 }
 
-// build encoder for a set of strings (including the nulls);
-struct huffman_encoder *strings_encoder(int count, char **s) {
-	int *freqs = byte_freqs(count, s);
+// build encoder for a set of strings
+struct huffman_encoder *huffman_strings_encoder(int count, char **s) {
+	struct queue *in = queue_new();
+	for (int i = 0; i < count; ++i) {
+		queue_add(in, bytes_new(strlen(s[i]) + 1, s[i]));
+	}
+	int *freqs = byte_freqs(in);
+	queue_free(in);
+	struct encode_tree *t = encode_tree_build(freqs);
+	struct queue *depths = find_depth(t);
+	encode_tree_free(t);
+	free(freqs);
+	return encoder(depths);
+}
+
+// build encoder for a set of buffers
+struct huffman_encoder *huffman_bytes_encoder(struct queue *in) {
+	int *freqs = byte_freqs(in);
+	queue_free(in);
 	struct encode_tree *t = encode_tree_build(freqs);
 	struct queue *depths = find_depth(t);
 	encode_tree_free(t);
@@ -273,7 +295,8 @@ struct huffman_encoder *strings_encoder(int count, char **s) {
 }
 
 // Is this the right API? This emits some extra bits at the end, due to use of baos.
-void encode_bytes(struct baos *output, struct huffman_encoder *enc, int len, uint8_t *in) {
+// Are those bits zero? Might be a problem if not.
+void huffman_encode_bytes(struct baos *output, struct huffman_encoder *enc, int len, uint8_t *in) {
 	struct huffman_code *dict = enc->dict;
 	uint64_t out = 0;
 	int m = 0;

@@ -9,35 +9,7 @@
 
 #include <stdio.h> // debugging
 
-struct inner {
-	uint8_t *buff;
-	size_t len;
-	size_t c;
-	char current[500]; // XXX handle resizing
-};
-
-static void inner_init(struct inner *inner, uint8_t *buff, size_t len) {
-	size_t header_len = strlen(buff);
-	uint8_t *header = buff;
-	inner->buff = buff;
-	inner->len = len;
-	inner->c = header_len + 1;
-	memcpy(inner->current, header, header_len);
-	inner->current[header_len] = '\0';
-}
-
-static uint32_t vbyte_decode(struct inner *inner) {
-	int x = 0;
-	while (1) {
-		uint8_t b = inner->buff[inner->c++];
-		if ((b & 0x80) == 0) {
-			x = (x | b) << 7;
-		} else {
-			return x | (b & 0x7f);
-		}
-	}
-}
-
+// encode support
 static void vbyte_encode(struct baos *out, long i) {
 	int len = (i < 0x80) ? 0 :
 		(i < 0x4000) ? 1 :
@@ -66,20 +38,117 @@ static int common_prefix(char *a, char *b) {
 	return n;
 }
 
-static void diff_rec(struct baos *out, char *a, char *b) {
+static void diff_rec(struct baos *out, uint8_t *a, uint8_t *b) {
 	int n = common_prefix(a, b);
 	vbyte_encode(out, n);
-	baos_copy(out, (uint8_t *)b, 0, n);
-	baos_push(out, 0);
+	baos_copy(out, (uint8_t *)b + n, strlen(b) - n + 1);
 }
 
-static uint8_t *compute_inner(int count, char **strings) {
+static struct bytes *compute_inner(int count, uint8_t **strings) {
 	struct baos *out = baos_new();
 	int i = 0;
+	baos_copy(out, strings[0], strlen(strings[0]) + 1);
+	count--;
 	while (i < count) {
 		diff_rec(out, strings[i], strings[i + 1]);
+		i += 1;
 	}
-	return baos_to_array(out);
+	return baos_to_bytes(out);
+}
+
+#define BINSIZE 256
+
+uint32_t *compute_offsets(struct queue *bins) {
+	int c = queue_count(bins);
+	uint32_t *offsets = malloc(sizeof(uint32_t) * c);
+	offsets[0] = 0;
+	for (int i = 1; i < c; ++i) {
+		struct bytes *b = queue_take(bins);
+		offsets[i] = b->len + offsets[i - 1];
+	}
+	queue_free(bins);
+	return offsets;
+}
+
+struct bytes *hfc_compress(int count, uint8_t **strings) {
+	// build front-coded bins
+	struct queue *bin_queue = queue_new();
+	for (int i = 0; i < count; i += BINSIZE) {
+		int len = i + BINSIZE > count ? count % BINSIZE : BINSIZE;
+		queue_add(bin_queue, compute_inner(len, strings + i));
+	}
+	// Note that we need to walk the queue, then walk it again.
+	// Could switch to a list or array type, instead of copy.
+	struct huffman_encoder *enc = huffman_bytes_encoder(queue_copy(bin_queue));
+
+	int bin_count = queue_count(bin_queue);
+	struct queue *inner_queue = queue_new();
+	for (int i = 0; i < bin_count; ++i) {
+		struct baos *out = baos_new();
+		struct bytes *b = queue_take(bin_queue);
+		huffman_encode_bytes(out, enc, b->len, b->bytes);
+		queue_add(inner_queue, baos_to_bytes(out));
+	}
+	queue_free(bin_queue);
+
+	uint32_t *offsets = compute_offsets(queue_copy(inner_queue));
+	struct baos *out = baos_new();
+	baos_push(out, 'h');
+	baos_push(out, 'f');
+	baos_push(out, 'c');
+	baos_push(out, 0);
+	baos_push_int(out, count);
+	baos_push_int(out, BINSIZE);
+	huffman_serialize(out, enc);
+	for (int i = 0; i < bin_count; ++i) {
+		baos_push_int(out, offsets[i]);
+	}
+	for (int i = 0; i < bin_count; ++i) {
+		struct bytes *b = queue_take(inner_queue);
+		baos_copy(out, b->bytes, b->len);
+	}
+	// align to word boundary
+	int total = baos_count(out);
+	for (int i = 0; i < (4 - (total % 4)) % 4; ++i) {
+		baos_push(out, 0);
+	}
+	queue_free(inner_queue);
+	free(offsets);
+
+	return baos_to_bytes(out);
+}
+
+
+// decode
+
+// support for iterators
+struct inner {
+	uint8_t *buff;
+	size_t len;
+	size_t c;
+	char current[500]; // XXX handle resizing
+};
+
+static uint32_t vbyte_decode(struct inner *inner) {
+	int x = 0;
+	while (1) {
+		uint8_t b = inner->buff[inner->c++];
+		if ((b & 0x80) == 0) {
+			x = (x | b) << 7;
+		} else {
+			return x | (b & 0x7f);
+		}
+	}
+}
+
+static void inner_init(struct inner *inner, uint8_t *buff, size_t len) {
+	size_t header_len = strlen(buff);
+	uint8_t *header = buff;
+	inner->buff = buff;
+	inner->len = len;
+	inner->c = header_len + 1;
+	memcpy(inner->current, header, header_len);
+	inner->current[header_len] = '\0';
 }
 
 static void inner_next(struct inner *inner) {

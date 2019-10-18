@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include "bytes.h"
 
 #define SIZE 4096
 
@@ -43,8 +44,8 @@ void baos_push(struct baos *baos, uint8_t b) {
 	}
 }
 
-void baos_copy(struct baos *baos, uint8_t *p, int start, int end) {
-	for (int i = start; i < end; ++i) {
+void baos_copy(struct baos *baos, uint8_t *p, int len) {
+	for (int i = 0; i < len; ++i) {
 		baos_push(baos, p[i]);
 	}
 }
@@ -97,4 +98,10 @@ uint8_t *baos_to_array(struct baos *baos) {
 
 	free(baos);
 	return out;
+}
+
+struct bytes *baos_to_bytes(struct baos *baos) {
+	size_t len = baos_count(baos);
+	uint8_t *b = baos_to_array(baos);
+	return bytes_new(len, b);
 }

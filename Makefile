@@ -9,7 +9,7 @@ CFLAGS=--std=gnu99 -O3
 #
 SRCS= baos.c bench.c color_scales.c fradix16-64.c fradix16.c fradix.c heatmap.c \
 	hfc.c htfc.c hfcz.c htfcz.c huffman.c queue.c radix.c roaring.c roaring_test.c stats.c \
-	test_baos.c test_hfc.c test_htfc.c test_huffman.c test_queue.c test_stats.c test.c
+	bytes.c test_baos.c test_hfc.c test_htfc.c test_huffman.c test_queue.c test_stats.c test.c
 
 DEPDIR := .deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
@@ -33,7 +33,7 @@ bench_objects=radix.o fradix.o fradix16.o fradix16-64.o bench.o
 
 bench: $(bench_objects)
 
-test: test.o test_baos.o baos.o test_queue.o queue.o test_stats.o stats.o fradix16.o test_huffman.o huffman.o test_htfc.o htfc.o test_hfc.o hfc.o
+test: test.o test_baos.o baos.o test_queue.o queue.o test_stats.o stats.o fradix16.o test_huffman.o huffman.o test_htfc.o htfc.o test_hfc.o hfc.o bytes.o
 		$(CC) $(CFLAGS) -o $@ $^ -lcheck -lm -lrt -lpthread -lsubunit
 
 RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue"]'

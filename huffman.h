@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "baos.h"
+#include "queue.h"
 
 struct node;
 
@@ -12,7 +13,6 @@ struct node *huffman_ht_tree_case(struct node *root, uint8_t *buff8, int offset8
 int huffman_decode_to(struct node *root, uint8_t *buff8, int start, struct baos *out);
 void huffman_decode_range(struct node *root, uint8_t *buff8, int start, int end, struct baos *out);
 
-// tree decoder
 struct node *huffman_new(void);
 void huffman_free(struct node *);
 
@@ -36,10 +36,11 @@ void encode_tree_free(struct encode_tree *tree);
 void encode_tree_dump(struct encode_tree *tree);
 
 #define NBYTE 256
-int *byte_freqs(int count, char **s);
-struct huffman_encoder *strings_encoder(int count, char **s);
+int *byte_freqs(struct queue *in);
+struct huffman_encoder *huffman_strings_encoder(int count, char **s);
+struct huffman_encoder *huffman_bytes_encoder(struct queue *in);
 void huffman_serialize(struct baos *out, struct huffman_encoder *huff);
 void huffman_encoder_free(struct huffman_encoder *enc);
-void encode_bytes(struct baos *output, struct huffman_encoder *enc, int len, uint8_t *in);
+void huffman_encode_bytes(struct baos *output, struct huffman_encoder *enc, int len, uint8_t *in);
 
 #endif //XENA_HUFFMAN_H

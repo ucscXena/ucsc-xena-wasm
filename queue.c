@@ -37,6 +37,16 @@ void queue_add(struct queue *queue, void *value) {
 	queue->count++;
 }
 
+struct queue *queue_copy(struct queue *queue) {
+	struct queue *out = queue_new();
+	struct el *node = queue->head;
+	while (node) {
+		queue_add(out, node->value);
+		node = node->next;
+	}
+	return out;
+}
+
 void *queue_peek(struct queue *queue) {
 	return queue->head->value;
 }

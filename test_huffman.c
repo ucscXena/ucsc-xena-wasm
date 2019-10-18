@@ -4,11 +4,16 @@
 #include <check.h>
 #include "baos.h"
 #include "huffman.h"
+#include "bytes.h"
+#include "queue.h"
 
 START_TEST(test_byte_freqs)
 {
-	char *s[] = {"foo", "bar"};
-	int *freqs = byte_freqs(2, s);
+	struct queue *q = queue_new();
+	queue_add(q, bytes_new(4, "foo"));
+	queue_add(q, bytes_new(4, "bar"));
+	int *freqs = byte_freqs(q);
+	queue_free(q);
 	ck_assert_int_eq(freqs[0], 2);
 	ck_assert_int_eq(freqs['a'], 1);
 	ck_assert_int_eq(freqs['b'], 1);
@@ -34,8 +39,11 @@ END_TEST
 
 START_TEST(test_encode_tree)
 {
-	char *s[] = {"foo", "bar"};
-	int *freqs = byte_freqs(2, s);
+	struct queue *q = queue_new();
+	queue_add(q, bytes_new(4, "foo"));
+	queue_add(q, bytes_new(4, "bar"));
+	int *freqs = byte_freqs(q);
+	queue_free(q);
 	struct encode_tree *t = encode_tree_build(freqs);
 	// just test that we don't throw
 	encode_tree_free(t);
@@ -47,7 +55,7 @@ START_TEST(test_encode_decode)
 {
 	char *s[] = {"foo", "bar"};
 	struct decoder dec;
-	struct huffman_encoder *enc = strings_encoder(2, s);
+	struct huffman_encoder *enc = huffman_strings_encoder(2, s);
 	{
 		struct baos *output = baos_new();
 		huffman_serialize(output, enc);
@@ -58,7 +66,7 @@ START_TEST(test_encode_decode)
 
 	struct baos *output = baos_new();
 	char in[] = {'f', 'o', 'o', 0, 'b', 'a', 'r', 0};
-	encode_bytes(output, enc, sizeof(in), in);
+	huffman_encode_bytes(output, enc, sizeof(in), in);
 	int len = baos_count(output);
 	uint8_t *out = baos_to_array(output);
 	huffman_encoder_free(enc);

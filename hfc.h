@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "hfc_struct.h"
+#include "bytes.h"
 
 struct hfc;
 
@@ -18,5 +19,7 @@ void hfc_free(struct hfc *);
 struct hfc_iter *hfc_iter_init(struct hfc *hfc);
 char *hfc_iter_next(struct hfc_iter *iter);
 void hfc_iter_free(struct hfc_iter *iter);
+
+struct bytes *hfc_compress(int count, uint8_t **strings);
 
 #endif //XENA_HTC_H
