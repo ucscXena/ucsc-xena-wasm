@@ -97,9 +97,9 @@ START_TEST(test_encode_basic)
 	struct hfc *hfc = hfc_new(b->bytes, b->len);
 	ck_assert_int_eq(hfc_count(hfc), 3);
 	struct hfc_iter *it = hfc_iter_init(hfc);
-	ck_assert_str_eq(hfc_iter_next(it), "foo");
 	ck_assert_str_eq(hfc_iter_next(it), "bar");
 	ck_assert_str_eq(hfc_iter_next(it), "baz");
+	ck_assert_str_eq(hfc_iter_next(it), "foo");
 	hfc_free(hfc);
 	bytes_free(b);
 }

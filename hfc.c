@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -70,7 +69,7 @@ uint32_t *compute_offsets(struct queue *bins) {
 	return offsets;
 }
 
-struct bytes *hfc_compress(int count, uint8_t **strings) {
+struct bytes *hfc_compress_sorted(int count, uint8_t **strings) {
 	// build front-coded bins
 	struct queue *bin_queue = queue_new();
 	for (int i = 0; i < count; i += BINSIZE) {
@@ -116,6 +115,16 @@ struct bytes *hfc_compress(int count, uint8_t **strings) {
 	free(offsets);
 
 	return baos_to_bytes(out);
+}
+
+static int cmpstr(const void *a, const void *b) {
+	return strcmp(*((const char **)a), *((const char **)b));
+}
+
+// XXX modifies strings
+struct bytes *hfc_compress(int count, uint8_t **strings) {
+	qsort(strings, count, sizeof(uint8_t *), cmpstr);
+	return hfc_compress_sorted(count, strings);
 }
 
 
