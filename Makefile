@@ -59,7 +59,8 @@ htfcz: htfcz.o htfc.o baos.o huffman.o queue.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 METHODS=fradix16-64.o fradix16.o stats.o color_scales.o heatmap.o huffman.o baos.o htfc.o
-hfcz: hfcz.o hfc.o baos.o huffman.o queue.o
+
+hfcz: hfcz.o hfc.o baos.o huffman.o queue.o bytes.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 
