@@ -18,8 +18,10 @@ void update_freqs(int *freqs, uint8_t *s, size_t len) {
 int *byte_freqs(struct queue *q) {
 	int *freqs = calloc(256, sizeof(int));
 	int count = queue_count(q);
-	for (int i = 0; i < count; i++) {
-		struct bytes *b = queue_take(q);
+	queue_iter itr;
+	queue_iter_init(q, &itr);
+	while (queue_iter_next(&itr)) {
+		struct bytes *b = queue_iter_value(itr);
 		update_freqs(freqs, b->bytes, b->len);
 	}
 	return freqs;
@@ -286,7 +288,6 @@ struct huffman_encoder *huffman_strings_encoder(int count, char **s) {
 // build encoder for a set of buffers
 struct huffman_encoder *huffman_bytes_encoder(struct queue *in) {
 	int *freqs = byte_freqs(in);
-	queue_free(in);
 	struct encode_tree *t = encode_tree_build(freqs);
 	struct queue *depths = find_depth(t);
 	encode_tree_free(t);

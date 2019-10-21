@@ -13,6 +13,11 @@ START_TEST(test_byte_freqs)
 	queue_add(q, bytes_new(4, "foo"));
 	queue_add(q, bytes_new(4, "bar"));
 	int *freqs = byte_freqs(q);
+	struct bytes *b;
+	while (b = queue_take(q)) {
+		// normally would do bytes_free, but we're using string constants here.
+		free(b);
+	}
 	queue_free(q);
 	ck_assert_int_eq(freqs[0], 2);
 	ck_assert_int_eq(freqs['a'], 1);
@@ -43,6 +48,11 @@ START_TEST(test_encode_tree)
 	queue_add(q, bytes_new(4, "foo"));
 	queue_add(q, bytes_new(4, "bar"));
 	int *freqs = byte_freqs(q);
+	struct bytes *b;
+	while (b = queue_take(q)) {
+		// normally would do bytes_free, but we're using string constants here.
+		free(b);
+	}
 	queue_free(q);
 	struct encode_tree *t = encode_tree_build(freqs);
 	// just test that we don't throw
@@ -53,9 +63,17 @@ END_TEST
 
 START_TEST(test_encode_decode)
 {
-	char *s[] = {"foo", "bar"};
 	struct decoder dec;
-	struct huffman_encoder *enc = huffman_strings_encoder(2, s);
+	struct queue *q = queue_new();
+	queue_add(q, bytes_new(4, "foo"));
+	queue_add(q, bytes_new(4, "bar"));
+	struct huffman_encoder *enc = huffman_bytes_encoder(q);
+	struct bytes *b;
+	while (b = queue_take(q)) {
+		// normally would do bytes_free, but we're using string constants here.
+		free(b);
+	}
+	queue_free(q);
 	{
 		struct baos *output = baos_new();
 		huffman_serialize(output, enc);

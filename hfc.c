@@ -58,14 +58,18 @@ static struct bytes *compute_inner(int count, uint8_t **strings) {
 #define BINSIZE 256
 
 uint32_t *compute_offsets(struct queue *bins) {
+	queue_iter itr;
+	queue_iter_init(bins, &itr);
 	int c = queue_count(bins);
 	uint32_t *offsets = malloc(sizeof(uint32_t) * c);
 	offsets[0] = 0;
-	for (int i = 1; i < c; ++i) {
-		struct bytes *b = queue_take(bins);
+	int i = 0;
+	queue_iter_next(&itr); // must be at least one bin
+	while (queue_iter_next(&itr)) {
+		struct bytes *b = queue_iter_value(itr);
 		offsets[i] = b->len + offsets[i - 1];
+		i += 1;
 	}
-	queue_free(bins);
 	return offsets;
 }
 
@@ -78,7 +82,7 @@ struct bytes *hfc_compress_sorted(int count, uint8_t **strings) {
 	}
 	// Note that we need to walk the queue, then walk it again.
 	// Could switch to a list or array type, instead of copy.
-	struct huffman_encoder *enc = huffman_bytes_encoder(queue_copy(bin_queue));
+	struct huffman_encoder *enc = huffman_bytes_encoder(bin_queue);
 
 	int bin_count = queue_count(bin_queue);
 	struct queue *inner_queue = queue_new();
@@ -86,11 +90,12 @@ struct bytes *hfc_compress_sorted(int count, uint8_t **strings) {
 		struct baos *out = baos_new();
 		struct bytes *b = queue_take(bin_queue);
 		huffman_encode_bytes(out, enc, b->len, b->bytes);
+		bytes_free(b);
 		queue_add(inner_queue, baos_to_bytes(out));
 	}
 	queue_free(bin_queue);
 
-	uint32_t *offsets = compute_offsets(queue_copy(inner_queue));
+	uint32_t *offsets = compute_offsets(inner_queue);
 	struct baos *out = baos_new();
 	baos_push(out, 'h');
 	baos_push(out, 'f');
@@ -105,6 +110,7 @@ struct bytes *hfc_compress_sorted(int count, uint8_t **strings) {
 	for (int i = 0; i < bin_count; ++i) {
 		struct bytes *b = queue_take(inner_queue);
 		baos_copy(out, b->bytes, b->len);
+		bytes_free(b);
 	}
 	// align to word boundary
 	int total = baos_count(out);
@@ -113,6 +119,7 @@ struct bytes *hfc_compress_sorted(int count, uint8_t **strings) {
 	}
 	queue_free(inner_queue);
 	free(offsets);
+	huffman_encoder_free(enc);
 
 	return baos_to_bytes(out);
 }
@@ -233,8 +240,6 @@ int hfc_count(struct hfc *hfc) {
 // Need to change the API surface for huffman, and baos?
 // Maybe use something other than baos for header?
 static void uncompress_bin(struct hfc *hfc, int bin_index, struct inner *inner, int ignore_case) {
-	struct baos *out = baos_new(); // XXX smaller bin size, or alternate output API?
-
 	uint32_t *buff32 = (uint32_t *)hfc->buff;
 
 	int bin = 4 * hfc->first_bin + buff32[hfc->bin_offsets + bin_index];
@@ -246,15 +251,15 @@ static void uncompress_bin(struct hfc *hfc, int bin_index, struct inner *inner, 
 
 	int upper = (bin_index == hfc->bin_count - 1) ? hfc->buff_length :
 		4 * hfc->first_bin + buff32[hfc->bin_offsets + 1 + bin_index];
-	struct baos *out2 = baos_new();
+	struct baos *out = baos_new();
 
 	struct decoder *decoder = ignore_case ? &hfc->decoder_case : &hfc->decoder;
-	huffman_canonical_decode(decoder, hfc->buff, bin, upper, out2);
+	huffman_canonical_decode(decoder, hfc->buff, bin, upper, out);
 
-	int inner_len = baos_count(out2);
-	uint8_t *out2_arr = baos_to_array(out2);
+	int inner_len = baos_count(out);
+	uint8_t *out_arr = baos_to_array(out);
 
-	inner_init(inner, out2_arr, inner_len);
+	inner_init(inner, out_arr, inner_len);
 }
 
 void hfc_search(struct hfc *hfc, int (*cmp)(const char *, const char *), int ignore_case, char *substring, struct search_result *result) {

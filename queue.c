@@ -23,6 +23,24 @@ struct queue *queue_new() {
 	return queue;
 }
 
+// This creates an iterator over the queue. The state of the iterator
+// is undefined if the queue is modified.
+void queue_iter_init(struct queue *queue, struct el **itr) {
+	*itr = (struct el *)&queue->head;
+}
+
+int queue_iter_next(struct el **itr) {
+	*itr = (*itr)->next;
+	if (*itr) {
+		return 1;
+	}
+	return 0;
+}
+
+void *queue_iter_value(struct el *itr) {
+	return itr->value;
+}
+
 void queue_add(struct queue *queue, void *value) {
 	struct el *node = malloc(sizeof(struct el));
 	node->next = NULL;

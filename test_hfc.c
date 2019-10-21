@@ -102,6 +102,7 @@ START_TEST(test_encode_basic)
 	ck_assert_str_eq(hfc_iter_next(it), "foo");
 	hfc_free(hfc);
 	bytes_free(b);
+	hfc_iter_free(it);
 }
 END_TEST
 
