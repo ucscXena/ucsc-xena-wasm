@@ -270,21 +270,6 @@ struct huffman_encoder *encoder(struct queue *depths) {
 	return encoder;
 }
 
-// build encoder for a set of strings
-struct huffman_encoder *huffman_strings_encoder(int count, char **s) {
-	struct queue *in = queue_new();
-	for (int i = 0; i < count; ++i) {
-		queue_add(in, bytes_new(strlen(s[i]) + 1, s[i]));
-	}
-	int *freqs = byte_freqs(in);
-	queue_free(in);
-	struct encode_tree *t = encode_tree_build(freqs);
-	struct queue *depths = find_depth(t);
-	encode_tree_free(t);
-	free(freqs);
-	return encoder(depths);
-}
-
 // build encoder for a set of buffers
 struct huffman_encoder *huffman_bytes_encoder(struct queue *in) {
 	int *freqs = byte_freqs(in);
