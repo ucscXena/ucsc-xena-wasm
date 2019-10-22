@@ -241,9 +241,9 @@ void huffman_encoder_free(struct huffman_encoder *enc) {
 // and symbols. We can reconstruct the decode tree from that.
 struct huffman_encoder *encoder(struct queue *depths) {
 	struct queue *symbols;
-	int depth = 1;
+	int depth = 0;
 	int code = 0;
-	struct huffman_encoder *encoder = huffman_encoder_new(queue_count(depths));
+	struct huffman_encoder *encoder = huffman_encoder_new(queue_count(depths) - 1);
 	struct huffman_code *dict = encoder->dict;
 	int total = 0;
 	while ((symbols = queue_take(depths))) {
