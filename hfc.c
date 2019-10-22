@@ -57,45 +57,38 @@ static struct bytes *compute_inner(int count, uint8_t **strings) {
 
 #define BINSIZE 256
 
-uint32_t *compute_offsets(struct queue *bins) {
-	queue_iter itr;
-	queue_iter_init(bins, &itr);
-	int c = queue_count(bins);
-	uint32_t *offsets = malloc(sizeof(uint32_t) * c);
+uint32_t *compute_offsets(int count, struct bytes **bins) {
+	uint32_t *offsets = malloc(sizeof(uint32_t) * count);
 	offsets[0] = 0;
-	int i = 0;
-	queue_iter_next(&itr); // must be at least one bin
-	while (queue_iter_next(&itr)) {
-		struct bytes *b = queue_iter_value(itr);
+	for (int i = 1; i < count; ++i) {
+		struct bytes *b = bins[i - 1];
 		offsets[i] = b->len + offsets[i - 1];
-		i += 1;
 	}
 	return offsets;
 }
 
 struct bytes *hfc_compress_sorted(int count, uint8_t **strings) {
 	// build front-coded bins
-	struct queue *bin_queue = queue_new();
-	for (int i = 0; i < count; i += BINSIZE) {
-		int len = i + BINSIZE > count ? count % BINSIZE : BINSIZE;
-		queue_add(bin_queue, compute_inner(len, strings + i));
+	int bin_count = (count + BINSIZE - 1)  / BINSIZE;
+	struct bytes **bins = malloc(sizeof(struct bytes *) * bin_count);
+	for (int i = 0; i < bin_count; ++i) {
+		int len = i < bin_count - 1 || count % BINSIZE == 0 ? BINSIZE : count % BINSIZE;
+		bins[i] = compute_inner(len, strings + i * BINSIZE);
 	}
-	// Note that we need to walk the queue, then walk it again.
-	// Could switch to a list or array type, instead of copy.
-	struct huffman_encoder *enc = huffman_bytes_encoder(bin_queue);
 
-	int bin_count = queue_count(bin_queue);
-	struct queue *inner_queue = queue_new();
+	struct huffman_encoder *enc = huffman_bytes_encoder(bin_count, bins);
+
+	struct bytes **inner_bins = malloc(sizeof(struct bytes *) * bin_count);
 	for (int i = 0; i < bin_count; ++i) {
 		struct baos *out = baos_new();
-		struct bytes *b = queue_take(bin_queue);
+		struct bytes *b = bins[i];
 		huffman_encode_bytes(out, enc, b->len, b->bytes);
 		bytes_free(b);
-		queue_add(inner_queue, baos_to_bytes(out));
+		inner_bins[i] = baos_to_bytes(out);
 	}
-	queue_free(bin_queue);
+	free(bins);
 
-	uint32_t *offsets = compute_offsets(inner_queue);
+	uint32_t *offsets = compute_offsets(bin_count, inner_bins);
 	struct baos *out = baos_new();
 	baos_push(out, 'h');
 	baos_push(out, 'f');
@@ -108,16 +101,16 @@ struct bytes *hfc_compress_sorted(int count, uint8_t **strings) {
 		baos_push_int(out, offsets[i]);
 	}
 	for (int i = 0; i < bin_count; ++i) {
-		struct bytes *b = queue_take(inner_queue);
+		struct bytes *b = inner_bins[i];
 		baos_copy(out, b->bytes, b->len);
 		bytes_free(b);
 	}
+	free(inner_bins);
 	// align to word boundary
 	int total = baos_count(out);
 	for (int i = 0; i < (4 - (total % 4)) % 4; ++i) {
 		baos_push(out, 0);
 	}
-	queue_free(inner_queue);
 	free(offsets);
 	huffman_encoder_free(enc);
 

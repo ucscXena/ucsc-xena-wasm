@@ -38,27 +38,7 @@ START_TEST(test_queue)
 }
 END_TEST
 
-START_TEST(test_queue_iter)
-{
-	struct queue *aq = queue_new();
-	queue_add(aq, (void *)1);
-	queue_add(aq, (void *)2);
-	queue_add(aq, (void *)3);
-	queue_add(aq, (void *)4);
-	queue_iter itr;
-	queue_iter_init(aq, &itr);
-	int i = 0;
-	while (queue_iter_next(&itr)) {
-		++i;
-		ck_assert_int_eq((long)queue_iter_value(itr), i);
-	}
-	ck_assert_int_eq(i, 4);
-	queue_free(aq);
-}
-END_TEST
-
 void add_queue(TCase *tc) {
 	tcase_add_test(tc, test_array_queue);
 	tcase_add_test(tc, test_queue);
-	tcase_add_test(tc, test_queue_iter);
 }

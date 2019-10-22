@@ -36,8 +36,8 @@ void encode_tree_free(struct encode_tree *tree);
 void encode_tree_dump(struct encode_tree *tree);
 
 #define NBYTE 256
-int *byte_freqs(struct queue *in);
-struct huffman_encoder *huffman_bytes_encoder(struct queue *in);
+int *byte_freqs(int count, struct bytes **bin);
+struct huffman_encoder *huffman_bytes_encoder(int count, struct bytes **bins);
 void huffman_serialize(struct baos *out, struct huffman_encoder *huff);
 void huffman_encoder_free(struct huffman_encoder *enc);
 void huffman_encode_bytes(struct baos *output, struct huffman_encoder *enc, int len, uint8_t *in);

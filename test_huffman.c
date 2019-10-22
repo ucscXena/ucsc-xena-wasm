@@ -9,16 +9,12 @@
 
 START_TEST(test_byte_freqs)
 {
-	struct queue *q = queue_new();
-	queue_add(q, bytes_new(4, "foo"));
-	queue_add(q, bytes_new(4, "bar"));
-	int *freqs = byte_freqs(q);
-	struct bytes *b;
-	while (b = queue_take(q)) {
-		// normally would do bytes_free, but we're using string constants here.
-		free(b);
-	}
-	queue_free(q);
+	struct bytes *bins[2];
+	bins[0] = bytes_new(4, "foo");
+	bins[1] = bytes_new(4, "bar");
+	int *freqs = byte_freqs(2, bins);
+	free(bins[0]);
+	free(bins[1]);
 	ck_assert_int_eq(freqs[0], 2);
 	ck_assert_int_eq(freqs['a'], 1);
 	ck_assert_int_eq(freqs['b'], 1);
@@ -44,16 +40,12 @@ END_TEST
 
 START_TEST(test_encode_tree)
 {
-	struct queue *q = queue_new();
-	queue_add(q, bytes_new(4, "foo"));
-	queue_add(q, bytes_new(4, "bar"));
-	int *freqs = byte_freqs(q);
-	struct bytes *b;
-	while (b = queue_take(q)) {
-		// normally would do bytes_free, but we're using string constants here.
-		free(b);
-	}
-	queue_free(q);
+	struct bytes *bins[2];
+	bins[0] = bytes_new(4, "foo");
+	bins[1] = bytes_new(4, "bar");
+	int *freqs = byte_freqs(2, bins);
+	free(bins[0]);
+	free(bins[1]);
 	struct encode_tree *t = encode_tree_build(freqs);
 	// just test that we don't throw
 	encode_tree_free(t);
@@ -64,16 +56,12 @@ END_TEST
 START_TEST(test_encode_decode)
 {
 	struct decoder dec;
-	struct queue *q = queue_new();
-	queue_add(q, bytes_new(4, "foo"));
-	queue_add(q, bytes_new(4, "bar"));
-	struct huffman_encoder *enc = huffman_bytes_encoder(q);
-	struct bytes *b;
-	while (b = queue_take(q)) {
-		// normally would do bytes_free, but we're using string constants here.
-		free(b);
-	}
-	queue_free(q);
+	struct bytes *bins[2];
+	bins[0] = bytes_new(4, "foo");
+	bins[1] = bytes_new(4, "bar");
+	struct huffman_encoder *enc = huffman_bytes_encoder(2, bins);
+	free(bins[0]);
+	free(bins[1]);
 	{
 		struct baos *output = baos_new();
 		huffman_serialize(output, enc);
