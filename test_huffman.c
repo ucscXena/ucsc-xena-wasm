@@ -43,13 +43,10 @@ START_TEST(test_encode_tree)
 	struct bytes *bins[2];
 	bins[0] = bytes_new(4, "foo");
 	bins[1] = bytes_new(4, "bar");
-	int *freqs = byte_freqs(2, bins);
+	struct huffman_encoder *enc = huffman_bytes_encoder(2, bins);
+	huffman_encoder_free(enc);
 	free(bins[0]);
 	free(bins[1]);
-	struct encode_tree *t = encode_tree_build(freqs);
-	// just test that we don't throw
-	encode_tree_free(t);
-	free(freqs);
 }
 END_TEST
 
