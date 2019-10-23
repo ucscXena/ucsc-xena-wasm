@@ -11,12 +11,12 @@
 #include "queue.h"
 #include "bytes.h"
 
-void usage() {
+static void usage() {
 	printf("hfcz [-u] <file>\n");
 	exit(1);
 }
 
-int compress(const char *filename) {
+static int compress(const char *filename) {
 	int fd;
 	struct stat stat;
 	int r;
@@ -74,7 +74,7 @@ int compress(const char *filename) {
 }
 
 // XXX error handling
-int decompress(char *filename) {
+static int decompress(char *filename) {
 	struct stat filestats;
 	int r;
 	r = stat(filename, &filestats);

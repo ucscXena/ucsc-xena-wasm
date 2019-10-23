@@ -58,7 +58,7 @@ static struct bytes *compute_inner(int count, uint8_t **strings) {
 
 #define BINSIZE 256
 
-uint32_t *compute_offsets(int count, struct bytes **bins) {
+static uint32_t *compute_offsets(int count, struct bytes **bins) {
 	uint32_t *offsets = malloc(sizeof(uint32_t) * count);
 	offsets[0] = 0;
 	for (int i = 1; i < count; ++i) {

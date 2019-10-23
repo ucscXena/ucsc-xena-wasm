@@ -9,7 +9,7 @@
 #include "queue.h"
 #include "bytes.h"
 
-void update_freqs(int *freqs, uint8_t *s, size_t len) {
+static void update_freqs(int *freqs, uint8_t *s, size_t len) {
 	while (len--) {
 		freqs[*s++]++;
 	}
@@ -48,7 +48,7 @@ struct encode_tree {
 	};
 };
 
-void encode_tree_dump_n(struct encode_tree *tree, int depth) {
+static void encode_tree_dump_n(struct encode_tree *tree, int depth) {
 	if (tree) {
 		if (tree->type == MERGED) {
 			printf("%*c merged %d\n", depth, ' ', tree->priority);
@@ -60,11 +60,11 @@ void encode_tree_dump_n(struct encode_tree *tree, int depth) {
 	}
 }
 
-void encode_tree_dump(struct encode_tree *tree) {
+void huffman_encode_tree_dump(struct encode_tree *tree) {
 	encode_tree_dump_n(tree, 1);
 }
 
-struct encode_tree *merge(struct encode_tree *a, struct encode_tree *b)  {
+static struct encode_tree *merge(struct encode_tree *a, struct encode_tree *b)  {
 	struct encode_tree *m = malloc(sizeof(struct encode_tree));
 	m->priority = a->priority + b->priority;
 	m->type = MERGED;
@@ -73,7 +73,7 @@ struct encode_tree *merge(struct encode_tree *a, struct encode_tree *b)  {
 	return m;
 }
 
-struct encode_tree *symbol(char s, int priority) {
+static struct encode_tree *symbol(char s, int priority) {
 	struct encode_tree *m = malloc(sizeof(struct encode_tree));
 	m->priority = priority;
 	m->type = SYMBOL;
@@ -81,7 +81,7 @@ struct encode_tree *symbol(char s, int priority) {
 	return m;
 }
 
-struct encode_tree *take_lowest(struct array_queue *a, struct array_queue *b) {
+static struct encode_tree *take_lowest(struct array_queue *a, struct array_queue *b) {
 	// failure mode is a is null
 	if (!array_queue_count(b)) {
 		return array_queue_take(a);
@@ -98,7 +98,7 @@ struct encode_tree *take_lowest(struct array_queue *a, struct array_queue *b) {
 
 // Encoding tree. Different from decoding tree.
 // Needs to hold a symbol, or a merged node.
-struct encode_tree *encode_tree_build(int *freqs) {
+static struct encode_tree *encode_tree_build(int *freqs) {
 	int idx[NBYTE];
 	for (int i = 0; i < NBYTE; ++i) {
 		idx[i] = i;
@@ -125,7 +125,7 @@ struct encode_tree *encode_tree_build(int *freqs) {
 	return tree;
 }
 
-void encode_tree_free(struct encode_tree *tree) {
+static void encode_tree_free(struct encode_tree *tree) {
 	if (tree) {
 		if (tree->type == MERGED) {
 			encode_tree_free(tree->child.left);
@@ -135,7 +135,7 @@ void encode_tree_free(struct encode_tree *tree) {
 	}
 }
 
-struct queue *find_depth_n(struct queue *nodes, struct queue *acc) {
+static struct queue *find_depth_n(struct queue *nodes, struct queue *acc) {
 	if (!queue_count(nodes)) {
 		queue_free(nodes);
 		return acc;
@@ -157,7 +157,7 @@ struct queue *find_depth_n(struct queue *nodes, struct queue *acc) {
 }
 
 // group and order symbols by depth.
-struct queue *find_depth(struct encode_tree *tree) {
+static struct queue *find_depth(struct encode_tree *tree) {
 	struct queue *nodes = queue_new();
 	struct queue *acc = queue_new();
 	queue_add(nodes, tree);
@@ -169,7 +169,7 @@ struct huffman_code {
 	long code;
 };
 
-uint8_t *queue_to_chars(struct queue *q) {
+static uint8_t *queue_to_chars(struct queue *q) {
 	int n = queue_count(q);
 	uint8_t *chars = malloc(n);
 	while (n--) {
@@ -179,7 +179,7 @@ uint8_t *queue_to_chars(struct queue *q) {
 	return chars;
 }
 
-int cmp_char(const void *a, const void *b) {
+static int cmp_char(const void *a, const void *b) {
 	uint8_t x = *(uint8_t *)a;
 	uint8_t y = *(uint8_t *)b;
 	return x > y ? 1 :
@@ -236,7 +236,7 @@ void huffman_encoder_free(struct huffman_encoder *enc) {
 // and the hash for encoding. Hash for encoding is byte -> {symbol, length}.
 // This can just be an array. Decode dict can be just lens
 // and symbols. We can reconstruct the decode tree from that.
-struct huffman_encoder *encoder(struct queue *depths) {
+static struct huffman_encoder *encoder(struct queue *depths) {
 	struct queue *symbols;
 	int depth = 0;
 	int code = 0;
@@ -459,12 +459,12 @@ void dump_sym(uint8_t s) {
 }
 #endif
 
-int identity(int x) {
+static int identity(int x) {
     return x;
 }
 
 // for canonical decoder. offset, and right-justified base
-void huffman_decoder_init_transform(struct decoder *decoder, uint8_t *buff8, int offset32, int (*transform)(int)) {
+static void huffman_decoder_init_transform(struct decoder *decoder, uint8_t *buff8, int offset32, int (*transform)(int)) {
 	uint32_t *buff32 = (uint32_t *)buff8;
 	int len = buff32[offset32];
 	uint64_t *base = malloc(sizeof(*base) * (len + 1));
@@ -531,7 +531,7 @@ void huffman_decoder_init2(struct decoder *decoder, uint8_t *buff8, int offset32
 }
 #endif
 
-struct node *huffman_ht_tree_transform(struct node *root, uint8_t *buff8, int offset8,
+static struct node *huffman_ht_tree_transform(struct node *root, uint8_t *buff8, int offset8,
 	    int (*transform)(int)) {
 	uint32_t *buff32 = (uint32_t *)buff8;
 	int offset32 = offset8 / 4;
