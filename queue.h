@@ -7,10 +7,6 @@ void *queue_peek(struct queue *queue);
 void *queue_take(struct queue *queue);
 void queue_free(struct queue *queue);
 int queue_count(struct queue *queue);
-struct queue *queue_copy(struct queue *queue);
-#ifdef DEBUG
-void queue_dump(struct queue *queue);
-#endif
 
 struct array_queue *array_queue_new();
 void array_queue_add(struct array_queue *array_queue, void *value);

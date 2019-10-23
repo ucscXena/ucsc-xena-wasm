@@ -1,6 +1,3 @@
-#ifdef DEBUG
-#include <stdio.h>
-#endif
 #include <stdlib.h>
 // FIFO
 
@@ -37,35 +34,9 @@ void queue_add(struct queue *queue, void *value) {
 	queue->count++;
 }
 
-struct queue *queue_copy(struct queue *queue) {
-	struct queue *out = queue_new();
-	struct el *node = queue->head;
-	while (node) {
-		queue_add(out, node->value);
-		node = node->next;
-	}
-	return out;
-}
-
 void *queue_peek(struct queue *queue) {
 	return queue->head->value;
 }
-
-#ifdef DEBUG
-void queue_dump(struct queue *queue) {
-	struct el *node = queue->head;
-	if (node) {
-		printf("%p", node);
-		while (node) {
-			node = node->next;
-			printf("-> %p", node);
-		}
-		printf("\n");
-	} else {
-		printf("<empty>\n");
-	}
-}
-#endif
 
 void *queue_take(struct queue *queue) {
 	struct el *head = queue->head;
