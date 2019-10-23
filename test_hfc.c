@@ -53,7 +53,6 @@ static void test_dict(int i) {
 cleanup:
 	hfc_iter_free(iter);
 	hfc_free(hfc);
-	free(buff);
 	free(o);
 	fclose(fp);
 }
@@ -75,7 +74,6 @@ START_TEST(test_basic)
 
 	free(result.matches);
 	hfc_free(hfc);
-	free(buff);
 	fclose(fp);
 }
 END_TEST
@@ -101,7 +99,34 @@ START_TEST(test_encode_basic)
 	ck_assert_str_eq(hfc_iter_next(it), "baz");
 	ck_assert_str_eq(hfc_iter_next(it), "foo");
 	hfc_free(hfc);
-	bytes_free(b);
+	free(b);
+	hfc_iter_free(it);
+}
+END_TEST
+
+START_TEST(test_merge)
+{
+	uint8_t *strings0[] = {"foo", "bar", "baz"};
+	struct bytes *b0 = hfc_compress(3, strings0);
+	struct hfc *hfc0 = hfc_new(b0->bytes, b0->len);
+
+	uint8_t *strings1[] = {"foo", "bin", "baz"};
+	struct bytes *b1 = hfc_compress(3, strings1);
+	struct hfc *hfc1 = hfc_new(b1->bytes, b1->len);
+
+	struct hfc *merged = hfc_merge(hfc0, hfc1);
+
+	ck_assert_int_eq(hfc_count(merged), 4);
+	struct hfc_iter *it = hfc_iter_init(merged);
+	ck_assert_str_eq(hfc_iter_next(it), "bar");
+	ck_assert_str_eq(hfc_iter_next(it), "baz");
+	ck_assert_str_eq(hfc_iter_next(it), "bin");
+	ck_assert_str_eq(hfc_iter_next(it), "foo");
+	hfc_free(merged);
+	hfc_free(hfc0);
+	hfc_free(hfc1);
+	free(b0);
+	free(b1);
 	hfc_iter_free(it);
 }
 END_TEST
@@ -110,4 +135,5 @@ void add_hfc(TCase *tc) {
 	tcase_add_test(tc, test_basic);
 	tcase_add_test(tc, test_boundaries);
 	tcase_add_test(tc, test_encode_basic);
+	tcase_add_test(tc, test_merge);
 }

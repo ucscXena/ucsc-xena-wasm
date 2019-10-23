@@ -5,6 +5,7 @@
 #include "baos.h"
 #include "huffman.h"
 #include "hfc.h"
+#include "array.h"
 
 #include <stdio.h> // debugging
 
@@ -212,6 +213,7 @@ void hfc_init(struct hfc *hfc, uint8_t *buff, size_t buff_length) {
 void hfc_free(struct hfc *hfc) {
 	huffman_decoder_free(&hfc->decoder);
 	huffman_decoder_free(&hfc->decoder_case);
+	free(hfc->buff);
 	free(hfc);
 }
 
@@ -321,6 +323,62 @@ void hfc_iter_free(struct hfc_iter *iter) {
 		free(iter->inner.buff);
 	}
 	free(iter);
+}
+
+static void add_dup(struct array *a, uint8_t *s) {
+	// we have to copy the string out of the mutable iterator, because
+	// the collection is compressed.
+	array_add(a, strdup(s));
+}
+
+static void clear_array(struct array *a) {
+	for (int i = 0; i < a->length; ++i) {
+		free(a->arr[i]);
+	}
+	array_free(a);
+}
+
+struct hfc *hfc_merge(struct hfc *ha, struct hfc *hb) {
+	struct hfc_iter *ia = hfc_iter_init(ha);
+	struct hfc_iter *ib = hfc_iter_init(hb);
+
+	// assumes ha and hb are not empty
+	char *ba = hfc_iter_next(ia);
+	char *bb = hfc_iter_next(ib);
+
+	struct array *out = array_new();
+	while (ba && bb) {
+		int cmp = strcmp(ba, bb);
+		if (cmp == 0) {
+			add_dup(out, ba);
+			ba = hfc_iter_next(ia);
+			bb = hfc_iter_next(ib);
+		} else if (cmp < 0) {
+			add_dup(out, ba);
+			ba = hfc_iter_next(ia);
+		} else {
+			add_dup(out, bb);
+			bb = hfc_iter_next(ib);
+		}
+	}
+	// only one of these loops will run, because the other
+	// is empty.
+	while (ba) {
+		add_dup(out, ba);
+		ba = hfc_iter_next(ia);
+	}
+	while (bb) {
+		add_dup(out, bb);
+		bb = hfc_iter_next(ib);
+	}
+	struct bytes *buff = hfc_compress(out->length, out->arr);
+	struct hfc *hfc = hfc_new(buff->bytes, buff->len);
+	clear_array(out);
+	free(buff);
+	hfc_iter_free(ia);
+	hfc_iter_free(ib);
+
+	return hfc;
 }
 
 // singletons, for xena client

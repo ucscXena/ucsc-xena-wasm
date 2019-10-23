@@ -21,5 +21,6 @@ char *hfc_iter_next(struct hfc_iter *iter);
 void hfc_iter_free(struct hfc_iter *iter);
 
 struct bytes *hfc_compress(int count, uint8_t **strings);
+struct hfc *hfc_merge(struct hfc *ha, struct hfc *hb);
 
 #endif //XENA_HTC_H
