@@ -58,7 +58,7 @@ wasm_struct.js: heatmap_struct.probe color_scales_struct.probe htfc_struct.probe
 htfcz: htfcz.o htfc.o baos.o huffman.o queue.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-METHODS=fradix16-64.o fradix16.o stats.o color_scales.o heatmap.o huffman.o baos.o htfc.o hfc.o
+METHODS=fradix16-64.o fradix16.o stats.o color_scales.o heatmap.o huffman.o baos.o bytes.o array.o queue.o htfc.o hfc.o
 
 hfcz: hfcz.o hfc.o baos.o huffman.o queue.o bytes.o array.o
 	$(CC) $(CFLAGS) -o $@ $^
