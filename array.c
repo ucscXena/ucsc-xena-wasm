@@ -10,9 +10,9 @@ struct array *array_new() {
 	return a;
 }
 
-void array_add(struct array *a, uint8_t *s) {
+void array_add(struct array *a, char *s) {
 	if (a->length % BINSIZE == 0) {
-		a->arr = realloc(a->arr, sizeof(uint8_t *) * BINSIZE * (a->length / BINSIZE + 1));
+		a->arr = realloc(a->arr, sizeof(char *) * BINSIZE * (a->length / BINSIZE + 1));
 	}
 	a->arr[a->length] = s;
 	a->length++;

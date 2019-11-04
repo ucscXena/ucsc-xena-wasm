@@ -27,10 +27,10 @@ static void vbyte_encode(struct baos *out, long i) {
 	}
 }
 
-static int common_prefix(char *a, char *b) {
+static int common_prefix(uint8_t *a, uint8_t *b) {
 	int n = 0;
-	int lena = strlen(a);
-	int lenb = strlen(b);
+	int lena = strlen((const char *)a);
+	int lenb = strlen((const char *)b);
 	int mlen = lena < lenb ? lena : lenb;
 	while (mlen > n && a[n] == b[n]) {
 		++n;
@@ -41,13 +41,13 @@ static int common_prefix(char *a, char *b) {
 static void diff_rec(struct baos *out, uint8_t *a, uint8_t *b) {
 	int n = common_prefix(a, b);
 	vbyte_encode(out, n);
-	baos_copy(out, (uint8_t *)b + n, strlen(b) - n + 1);
+	baos_copy(out, (uint8_t *)b + n, strlen((const char *)b) - n + 1);
 }
 
 static struct bytes *compute_inner(int count, uint8_t **strings) {
 	struct baos *out = baos_new();
 	int i = 0;
-	baos_copy(out, strings[0], strlen(strings[0]) + 1);
+	baos_copy(out, strings[0], strlen((const char *)strings[0]) + 1);
 	count--;
 	while (i < count) {
 		diff_rec(out, strings[i], strings[i + 1]);
@@ -152,7 +152,7 @@ static uint32_t vbyte_decode(struct inner *inner) {
 }
 
 static void inner_init(struct inner *inner, uint8_t *buff, size_t len) {
-	size_t header_len = strlen(buff);
+	size_t header_len = strlen((const char *)buff);
 	uint8_t *header = buff;
 	inner->buff = buff;
 	inner->len = len;
@@ -325,7 +325,7 @@ void hfc_iter_free(struct hfc_iter *iter) {
 	free(iter);
 }
 
-static void add_dup(struct array *a, uint8_t *s) {
+static void add_dup(struct array *a, const char *s) {
 	// we have to copy the string out of the mutable iterator, because
 	// the collection is compressed.
 	array_add(a, strdup(s));
