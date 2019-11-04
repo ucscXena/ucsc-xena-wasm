@@ -257,7 +257,7 @@ static void uncompress_bin(struct hfc *hfc, int bin_index, struct inner *inner, 
 	inner_init(inner, out_arr, inner_len);
 }
 
-void hfc_search(struct hfc *hfc, int (*cmp)(const char *, const char *), int ignore_case, char *substring, struct search_result *result) {
+void hfc_search_method(struct hfc *hfc, int (*cmp)(const char *, const char *), int ignore_case, char *substring, struct search_result *result) {
 	int matches = 0;
 	struct baos *out = baos_new();
 	struct inner inner;
@@ -332,13 +332,15 @@ static void add_dup(struct array *a, const char *s) {
 }
 
 static void clear_array(struct array *a) {
-	for (int i = 0; i < a->length; ++i) {
-		free(a->arr[i]);
+	if (a) {
+		for (int i = 0; i < a->length; ++i) {
+			free(a->arr[i]);
+		}
+		array_free(a);
 	}
-	array_free(a);
 }
 
-struct hfc *hfc_merge(struct hfc *ha, struct hfc *hb) {
+struct hfc *hfc_merge_two(struct hfc *ha, struct hfc *hb) {
 	struct hfc_iter *ia = hfc_iter_init(ha);
 	struct hfc_iter *ib = hfc_iter_init(hb);
 
@@ -371,7 +373,7 @@ struct hfc *hfc_merge(struct hfc *ha, struct hfc *hb) {
 		add_dup(out, bb);
 		bb = hfc_iter_next(ib);
 	}
-	struct bytes *buff = hfc_compress(out->length, out->arr);
+	struct bytes *buff = hfc_compress(out->length, (uint8_t **)out->arr);
 	struct hfc *hfc = hfc_new(buff->bytes, buff->len);
 	clear_array(out);
 	free(buff);
@@ -381,14 +383,15 @@ struct hfc *hfc_merge(struct hfc *ha, struct hfc *hb) {
 	return hfc;
 }
 
-// singletons, for xena client
+//
+// js exported API
+//
 static struct hfc *hfc_cache = NULL;
 static struct search_result hfc_cache_result;
 
-void hfc_store(uint8_t *buff, uint32_t len) {
+void hfc_set(uint8_t *buff, uint32_t len) {
 	if (hfc_cache) {
-		free(hfc_cache->buff);
-		free(hfc_cache);
+		hfc_free(hfc_cache);
 	}
 	hfc_cache = hfc_new(buff, len);
 }
@@ -403,17 +406,66 @@ static int exact(const char *a, const char *b) {
 
 // result.matches must be freed after use.
 // XXX substring is modified.
-struct search_result *hfc_search_store(char *substring, enum search_type type) {
+struct search_result *hfc_search(char *substring, enum search_type type) {
 	size_t len = strlen(substring);
     if (type == CONTAINS) {
 		for (int i = 0; i < len; ++i) {
 			substring[i] = tolower(substring[i]);
 		}
 	}
-	hfc_search(hfc_cache,
+	hfc_search_method(hfc_cache,
 		type == EXACT ? exact : contains,
 		type == EXACT ? 0 : 1,
 		substring,
 		&hfc_cache_result);
 	return &hfc_cache_result;
+}
+
+void hfc_merge(uint8_t *buff, uint32_t len) {
+	struct hfc *hfc = hfc_new(buff, len);
+	struct hfc *next = hfc_merge_two(hfc_cache, hfc);
+	hfc_free(hfc_cache);
+	hfc_free(hfc);
+	hfc_cache = next;
+}
+
+static struct array *inner_cache = NULL;
+static int inner_bin = -1;
+char *hfc_lookup(int i) {
+	int bin = i / hfc_cache->bin_size;
+	if (bin == inner_bin) {
+		return inner_cache->arr[i % hfc_cache->bin_size];
+	}
+	clear_array(inner_cache);
+	inner_cache = array_new();
+	inner_bin = bin;
+	struct inner inner;
+	uncompress_bin(hfc_cache, bin, &inner, 0);
+	array_add(inner_cache, strdup(inner.current));
+	int rem = hfc_cache->length % hfc_cache->bin_size;
+	int last = rem == 0 ? hfc_cache->bin_size :
+		i == hfc_cache->bin_count - 1 ? rem :
+		hfc_cache->bin_size;
+	for (int i = 1; i < last; ++i) {
+		inner_next(&inner);
+		array_add(inner_cache, strdup(inner.current));
+	}
+	free(inner.buff); // XXX this API is a bit wonky
+	return inner_cache->arr[i % hfc_cache->bin_size];
+}
+
+// apply search results as a filter
+void hfc_filter() {
+	struct array *out = array_new();
+	for (int i = 0; i < hfc_cache_result.count; ++i) {
+		array_add(out, hfc_lookup(hfc_cache_result.matches[i]));
+	}
+	struct bytes *buff = hfc_compress(out->length, (uint8_t **)out->arr);
+	clear_array(out);
+	hfc_set(buff->bytes, buff->len);
+	free(buff);
+}
+
+struct hfc *hfc_get_cache() {
+	return hfc_cache;
 }

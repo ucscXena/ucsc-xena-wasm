@@ -67,7 +67,7 @@ START_TEST(test_basic)
 
 	ck_assert_int_eq(hfc_count(hfc), 4);
 
-	hfc_search(hfc, contains, 0, "wo", &result);
+	hfc_search_method(hfc, contains, 0, "wo", &result);
 
 	ck_assert_int_eq(result.count, 1);
 	ck_assert_int_eq(result.matches[0], 3);
@@ -114,7 +114,7 @@ START_TEST(test_merge)
 	struct bytes *b1 = hfc_compress(3, strings1);
 	struct hfc *hfc1 = hfc_new(b1->bytes, b1->len);
 
-	struct hfc *merged = hfc_merge(hfc0, hfc1);
+	struct hfc *merged = hfc_merge_two(hfc0, hfc1);
 
 	ck_assert_int_eq(hfc_count(merged), 4);
 	struct hfc_iter *it = hfc_iter_init(merged);
@@ -131,9 +131,31 @@ START_TEST(test_merge)
 }
 END_TEST
 
+START_TEST(test_filter)
+{
+	uint8_t *strings0[] = {"one", "two", "three", "four", "five", "six", "seven", "eight"};
+
+	struct bytes *b0 = hfc_compress(8, strings0);
+	hfc_set(b0->bytes, b0->len);
+	free(b0);
+	char *x = strdup("i");
+	hfc_search(x, CONTAINS);
+	hfc_filter();
+	struct hfc_iter *it = hfc_iter_init(hfc_get_cache());
+	// sorted: eight five four one seven six three two
+	// matches: 0, 1, 5
+	ck_assert_str_eq(hfc_iter_next(it), "eight");
+	ck_assert_str_eq(hfc_iter_next(it), "five");
+	ck_assert_str_eq(hfc_iter_next(it), "six");
+	hfc_iter_free(it);
+	free(x);
+}
+END_TEST
+
 void add_hfc(TCase *tc) {
 	tcase_add_test(tc, test_basic);
 	tcase_add_test(tc, test_boundaries);
 	tcase_add_test(tc, test_encode_basic);
 	tcase_add_test(tc, test_merge);
+	tcase_add_test(tc, test_filter);
 }
