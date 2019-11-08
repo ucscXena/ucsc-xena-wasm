@@ -108,7 +108,7 @@ int array_queue_count(struct array_queue *queue) {
 		queue->tail - queue->head;
 }
 
-int array_queue_free(struct array_queue *queue) {
+void array_queue_free(struct array_queue *queue) {
 	free(queue->arr);
 	free(queue);
 }

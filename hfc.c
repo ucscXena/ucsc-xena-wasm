@@ -388,12 +388,23 @@ struct hfc *hfc_merge_two(struct hfc *ha, struct hfc *hb) {
 //
 static struct hfc *hfc_cache = NULL;
 static struct search_result hfc_cache_result;
+static struct array *inner_cache = NULL;
+static int inner_bin = -1;
 
-void hfc_set(uint8_t *buff, uint32_t len) {
+void hfc_set_internal(struct hfc *hfc) {
 	if (hfc_cache) {
 		hfc_free(hfc_cache);
 	}
-	hfc_cache = hfc_new(buff, len);
+	hfc_cache = hfc;
+	inner_cache = NULL;
+	inner_bin = -1;
+	// XXX clean up search result. Also, make sure we aren't
+	// leaking search result in the client after every search.
+	// hfc_cache_result
+}
+
+void hfc_set(uint8_t *buff, uint32_t len) {
+	hfc_set_internal(hfc_new(buff, len));
 }
 
 static int contains(const char *a, const char *b) {
@@ -423,34 +434,29 @@ struct search_result *hfc_search(char *substring, enum search_type type) {
 
 void hfc_merge(uint8_t *buff, uint32_t len) {
 	struct hfc *hfc = hfc_new(buff, len);
-	struct hfc *next = hfc_merge_two(hfc_cache, hfc);
-	hfc_free(hfc_cache);
+	hfc_set_internal(hfc_merge_two(hfc_cache, hfc));
 	hfc_free(hfc);
-	hfc_cache = next;
 }
 
-static struct array *inner_cache = NULL;
-static int inner_bin = -1;
 char *hfc_lookup(int i) {
 	int bin = i / hfc_cache->bin_size;
-	if (bin == inner_bin) {
-		return inner_cache->arr[i % hfc_cache->bin_size];
-	}
-	clear_array(inner_cache);
-	inner_cache = array_new();
-	inner_bin = bin;
-	struct inner inner;
-	uncompress_bin(hfc_cache, bin, &inner, 0);
-	array_add(inner_cache, strdup(inner.current));
-	int rem = hfc_cache->length % hfc_cache->bin_size;
-	int last = rem == 0 ? hfc_cache->bin_size :
-		i == hfc_cache->bin_count - 1 ? rem :
-		hfc_cache->bin_size;
-	for (int i = 1; i < last; ++i) {
-		inner_next(&inner);
+	if (bin != inner_bin) {
+		clear_array(inner_cache);
+		inner_cache = array_new();
+		inner_bin = bin;
+		struct inner inner;
+		uncompress_bin(hfc_cache, bin, &inner, 0);
 		array_add(inner_cache, strdup(inner.current));
+		int rem = hfc_cache->length % hfc_cache->bin_size;
+		int last = rem == 0 ? hfc_cache->bin_size :
+			bin == hfc_cache->bin_count - 1 ? rem :
+			hfc_cache->bin_size;
+		for (int i = 1; i < last; ++i) {
+			inner_next(&inner);
+			array_add(inner_cache, strdup(inner.current));
+		}
+		free(inner.buff); // XXX this API is a bit wonky
 	}
-	free(inner.buff); // XXX this API is a bit wonky
 	return inner_cache->arr[i % hfc_cache->bin_size];
 }
 
@@ -465,7 +471,18 @@ void hfc_filter() {
 	hfc_set(buff->bytes, buff->len);
 	free(buff);
 }
-
 struct hfc *hfc_get_cache() {
 	return hfc_cache;
+}
+
+int hfc_length() {
+	return hfc_cache->length;
+}
+
+int hfc_buff_length() {
+	return hfc_cache->buff_length;
+}
+
+char *hfc_buff() {
+	return (char *)hfc_cache->buff;
 }

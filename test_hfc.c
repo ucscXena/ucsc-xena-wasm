@@ -152,10 +152,31 @@ START_TEST(test_filter)
 }
 END_TEST
 
+START_TEST(test_lookup)
+{
+	uint8_t *strings0[] = {"one", "two", "three", "four", "five", "six", "seven", "eight"};
+
+	struct bytes *b0 = hfc_compress(8, strings0);
+	hfc_set(b0->bytes, b0->len);
+	free(b0);
+	// sorted: eight five four one seven six three two
+	ck_assert_str_eq(hfc_lookup(0), "eight");
+	ck_assert_str_eq(hfc_lookup(1), "five");
+	ck_assert_str_eq(hfc_lookup(2), "four");
+	ck_assert_str_eq(hfc_lookup(3), "one");
+	ck_assert_str_eq(hfc_lookup(4), "seven");
+	ck_assert_str_eq(hfc_lookup(5), "six");
+	ck_assert_str_eq(hfc_lookup(6), "three");
+	ck_assert_str_eq(hfc_lookup(7), "two");
+}
+END_TEST
+
+
 void add_hfc(TCase *tc) {
 	tcase_add_test(tc, test_basic);
 	tcase_add_test(tc, test_boundaries);
 	tcase_add_test(tc, test_encode_basic);
 	tcase_add_test(tc, test_merge);
 	tcase_add_test(tc, test_filter);
+	tcase_add_test(tc, test_lookup);
 }
