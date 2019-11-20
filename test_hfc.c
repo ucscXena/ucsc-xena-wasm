@@ -178,6 +178,7 @@ START_TEST(test_filter)
 	ck_assert_str_eq(hfc_iter_next(it), "six");
 	hfc_iter_free(it);
 	free(x);
+	hfc_clear_cache();
 }
 END_TEST
 
@@ -197,6 +198,7 @@ START_TEST(test_lookup)
 	ck_assert_str_eq(hfc_lookup(5), "six");
 	ck_assert_str_eq(hfc_lookup(6), "three");
 	ck_assert_str_eq(hfc_lookup(7), "two");
+	hfc_clear_cache();
 }
 END_TEST
 

@@ -30,5 +30,6 @@ char *hfc_lookup(int i);
 struct search_result *hfc_search(char *substring, enum search_type type);
 void hfc_filter();
 struct hfc *hfc_get_cache();
+void hfc_clear_cache(); // inner cache only
 
 #endif //XENA_HTC_H

@@ -59,11 +59,14 @@ static struct bytes *compute_inner(int count, uint8_t **strings) {
 #define BINSIZE 256
 
 static uint32_t *compute_offsets(int count, struct bytes **bins) {
-	uint32_t *offsets = malloc(sizeof(uint32_t) * count);
-	offsets[0] = 0;
-	for (int i = 1; i < count; ++i) {
-		struct bytes *b = bins[i - 1];
-		offsets[i] = b->len + offsets[i - 1];
+	uint32_t *offsets = NULL;
+	if (count) {
+		offsets = malloc(sizeof(uint32_t) * count);
+		offsets[0] = 0;
+		for (int i = 1; i < count; ++i) {
+			struct bytes *b = bins[i - 1];
+			offsets[i] = b->len + offsets[i - 1];
+		}
 	}
 	return offsets;
 }
@@ -391,13 +394,18 @@ static struct search_result hfc_cache_result;
 static struct array *inner_cache = NULL;
 static int inner_bin = -1;
 
+void hfc_clear_cache() {
+	clear_array(inner_cache);
+	inner_cache = NULL;
+	inner_bin = -1;
+}
+
 void hfc_set_internal(struct hfc *hfc) {
 	if (hfc_cache) {
 		hfc_free(hfc_cache);
 	}
 	hfc_cache = hfc;
-	inner_cache = NULL;
-	inner_bin = -1;
+	hfc_clear_cache();
 	// XXX clean up search result. Also, make sure we aren't
 	// leaking search result in the client after every search.
 	// hfc_cache_result
@@ -464,7 +472,9 @@ char *hfc_lookup(int i) {
 void hfc_filter() {
 	struct array *out = array_new();
 	for (int i = 0; i < hfc_cache_result.count; ++i) {
-		array_add(out, hfc_lookup(hfc_cache_result.matches[i]));
+		// have to copy out of cache, since cache will be invalidated
+		// during this loop.
+		array_add(out, strdup(hfc_lookup(hfc_cache_result.matches[i])));
 	}
 	struct bytes *buff = hfc_compress(out->length, (uint8_t **)out->arr);
 	clear_array(out);
