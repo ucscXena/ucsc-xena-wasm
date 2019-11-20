@@ -25,11 +25,13 @@ struct hfc *hfc_merge_two(struct hfc *ha, struct hfc *hb);
 
 // js API
 void hfc_set(uint8_t *buff, uint32_t len);
+void hfc_set_empty();
 void hfc_merge(uint8_t *buff, uint32_t len);
 char *hfc_lookup(int i);
 struct search_result *hfc_search(char *substring, enum search_type type);
 void hfc_filter();
 struct hfc *hfc_get_cache();
 void hfc_clear_cache(); // inner cache only
+int hfc_length();
 
 #endif //XENA_HTC_H

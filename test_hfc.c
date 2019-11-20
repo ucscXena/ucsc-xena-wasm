@@ -202,6 +202,13 @@ START_TEST(test_lookup)
 }
 END_TEST
 
+START_TEST(test_set_empty)
+{
+	hfc_set_empty();
+	ck_assert_int_eq(hfc_length(), 0);
+}
+END_TEST
+
 
 void add_hfc(TCase *tc) {
 	tcase_add_test(tc, test_basic);
@@ -212,4 +219,5 @@ void add_hfc(TCase *tc) {
 	tcase_add_test(tc, test_merge);
 	tcase_add_test(tc, test_filter);
 	tcase_add_test(tc, test_lookup);
+	tcase_add_test(tc, test_set_empty);
 }

@@ -415,6 +415,12 @@ void hfc_set(uint8_t *buff, uint32_t len) {
 	hfc_set_internal(hfc_new(buff, len));
 }
 
+void hfc_set_empty() {
+	struct bytes *buff = hfc_compress(0, 0);
+	hfc_set(buff->bytes, buff->len);
+	free(buff);
+}
+
 static int contains(const char *a, const char *b) {
 	return strstr(a, b) ? 1 : 0;
 }
