@@ -104,6 +104,35 @@ START_TEST(test_encode_basic)
 }
 END_TEST
 
+START_TEST(test_empty)
+{
+	uint8_t *strings[] = {};
+	struct bytes *b = hfc_compress(0, strings);
+	struct hfc *hfc = hfc_new(b->bytes, b->len);
+	ck_assert_int_eq(hfc_count(hfc), 0);
+	struct hfc_iter *it = hfc_iter_init(hfc);
+	ck_assert_ptr_eq(hfc_iter_next(it), NULL);
+	hfc_iter_free(it);
+	hfc_free(hfc);
+	free(b);
+}
+END_TEST
+
+START_TEST(test_one)
+{
+	uint8_t *strings[] = {"foo"};
+	struct bytes *b = hfc_compress(1, strings);
+	struct hfc *hfc = hfc_new(b->bytes, b->len);
+	ck_assert_int_eq(hfc_count(hfc), 1);
+	struct hfc_iter *it = hfc_iter_init(hfc);
+	ck_assert_str_eq(hfc_iter_next(it), "foo");
+	ck_assert_ptr_eq(hfc_iter_next(it), NULL);
+	hfc_iter_free(it);
+	hfc_free(hfc);
+	free(b);
+}
+END_TEST
+
 START_TEST(test_merge)
 {
 	uint8_t *strings0[] = {"foo", "bar", "baz"};
@@ -176,6 +205,8 @@ void add_hfc(TCase *tc) {
 	tcase_add_test(tc, test_basic);
 	tcase_add_test(tc, test_boundaries);
 	tcase_add_test(tc, test_encode_basic);
+	tcase_add_test(tc, test_empty);
+	tcase_add_test(tc, test_one);
 	tcase_add_test(tc, test_merge);
 	tcase_add_test(tc, test_filter);
 	tcase_add_test(tc, test_lookup);
