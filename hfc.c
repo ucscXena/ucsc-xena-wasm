@@ -198,6 +198,17 @@ struct hfc {
 	struct decoder decoder_case;
 };
 
+#if 0
+void hfc_dump(char *label, struct hfc *hfc) {
+	printf("%s buff %p len %d count %d bin size %d\n", label, hfc->buff, hfc->buff_length, hfc->length, hfc->bin_size);
+	printf(" bin offsets %d bin count %d first bin %d\n", hfc->bin_offsets, hfc->bin_count, hfc->first_bin);
+	for (int i = 0; i < 100 && i < hfc->buff_length; ++i) {
+	    printf("%d ", hfc->buff[i]);
+	}
+	printf("\n");
+}
+#endif
+
 void hfc_init(struct hfc *hfc, uint8_t *buff, size_t buff_length) {
 	hfc->buff = buff;
 	hfc->buff_length = buff_length;
