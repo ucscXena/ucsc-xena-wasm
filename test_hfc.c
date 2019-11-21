@@ -212,6 +212,25 @@ START_TEST(test_set_empty)
 END_TEST
 
 
+// we keep a static reference to the current sample list.
+// Testing some operations on that object.
+START_TEST(test_singleton)
+{
+	hfc_set_empty();
+	ck_assert_int_eq(hfc_length(), 0);
+
+	uint8_t *strings0[] = {"foo", "bar", "baz"};
+	struct bytes *b0 = hfc_compress(3, strings0);
+	hfc_merge(b0->bytes, b0->len);
+	ck_assert_int_eq(hfc_length(), 3);
+
+	uint8_t *strings1[] = {"foo", "bin", "baz"};
+	struct bytes *b1 = hfc_compress(3, strings1);
+	hfc_merge(b1->bytes, b1->len);
+	ck_assert_int_eq(hfc_length(), 4);
+}
+END_TEST
+
 void add_hfc(TCase *tc) {
 	tcase_add_test(tc, test_basic);
 	tcase_add_test(tc, test_boundaries);
@@ -222,4 +241,5 @@ void add_hfc(TCase *tc) {
 	tcase_add_test(tc, test_filter);
 	tcase_add_test(tc, test_lookup);
 	tcase_add_test(tc, test_set_empty);
+	tcase_add_test(tc, test_singleton);
 }
