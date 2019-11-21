@@ -30,8 +30,9 @@ static int *order(int n) {
 
 static char filename[500];
 static void test_dict(int i) {
-	sprintf(filename, "htfc%d-test.dict", i);
+	sprintf(filename, "data/htfc%d-test.dict", i);
 	FILE *fp = fopen(filename, "r");
+	ck_assert_ptr_ne(fp, NULL);
 	uint8_t *buff = malloc(BUFSIZE);
 	int len = fread(buff, 1, BUFSIZE, fp);
 	struct htfc *htfc = htfc_new(buff, len);
@@ -59,7 +60,8 @@ cleanup:
 
 START_TEST(test_basic)
 {
-	FILE *fp = fopen("htfc-basic-test.dict", "r");
+	FILE *fp = fopen("data/htfc-basic-test.dict", "r");
+	ck_assert_ptr_ne(fp, NULL);
 	uint8_t *buff = malloc(BUFSIZE);
 	int len = fread(buff, 1, BUFSIZE, fp);
 	struct htfc *htfc = htfc_new(buff, len);
