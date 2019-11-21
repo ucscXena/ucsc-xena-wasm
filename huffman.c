@@ -285,7 +285,7 @@ void huffman_encode_bytes(struct baos *output, struct huffman_encoder *enc, int 
 	int m = 0;
 	for (int i = 0; i < len; ++i) {
 		struct huffman_code *c = dict + in[i];
-		long code = c->code;
+		uint64_t code = c->code;
 		int length = c->length;
 		out |= code << (64 - m - length);
 		m += length;
