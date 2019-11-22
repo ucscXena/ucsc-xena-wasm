@@ -24,7 +24,7 @@ START_TEST(test_empty)
 
 	baos = baos_new();
 	len = baos_count(baos);
-	result = baos_to_array(baos);
+	result = (char *)baos_to_array(baos);
 	ck_assert_int_eq(len, 0);
 	ck_assert_ptr_null(result);
 	free(result);
@@ -42,7 +42,7 @@ START_TEST(test_one)
 	baos = baos_new();
 	baos_push(baos, s[0]);
 	len = baos_count(baos);
-	result = baos_to_array(baos);
+	result = (char *)baos_to_array(baos);
 
 	ck_assert_int_eq(len, 1);
 	ck_assert_ptr_ne(result, NULL);
@@ -68,7 +68,7 @@ START_TEST(test_boundary)
 			baos_push(baos, s[i % sizeof(s)]);
 		}
 		len = baos_count(baos);
-		result = baos_to_array(baos);
+		result = (char *)baos_to_array(baos);
 		ck_assert_int_eq(len, N);
 		ck_assert_ptr_ne(result, NULL);
 

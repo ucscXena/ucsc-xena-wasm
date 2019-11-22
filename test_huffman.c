@@ -10,8 +10,8 @@
 START_TEST(test_byte_freqs)
 {
 	struct bytes *bins[2];
-	bins[0] = bytes_new(4, "foo");
-	bins[1] = bytes_new(4, "bar");
+	bins[0] = bytes_new(4, (uint8_t *)"foo");
+	bins[1] = bytes_new(4, (uint8_t *)"bar");
 	int *freqs = byte_freqs(2, bins);
 	free(bins[0]);
 	free(bins[1]);
@@ -41,8 +41,8 @@ END_TEST
 START_TEST(test_encode_tree)
 {
 	struct bytes *bins[2];
-	bins[0] = bytes_new(4, "foo");
-	bins[1] = bytes_new(4, "bar");
+	bins[0] = bytes_new(4, (uint8_t *)"foo");
+	bins[1] = bytes_new(4, (uint8_t *)"bar");
 	struct huffman_encoder *enc = huffman_bytes_encoder(2, bins);
 	huffman_encoder_free(enc);
 	free(bins[0]);
@@ -54,21 +54,21 @@ START_TEST(test_encode_decode)
 {
 	struct decoder dec;
 	struct bytes *bins[2];
-	bins[0] = bytes_new(4, "foo");
-	bins[1] = bytes_new(4, "bar");
+	bins[0] = bytes_new(4, (uint8_t *)"foo");
+	bins[1] = bytes_new(4, (uint8_t *)"bar");
 	struct huffman_encoder *enc = huffman_bytes_encoder(2, bins);
 	free(bins[0]);
 	free(bins[1]);
 	{
 		struct baos *output = baos_new();
 		huffman_serialize(output, enc);
-		char *huff = baos_to_array(output);
+		uint8_t *huff = baos_to_array(output);
 		huffman_decoder_init(&dec, huff, 0);
 		free(huff);
 	}
 
 	struct baos *output = baos_new();
-	char in[] = {'f', 'o', 'o', 0, 'b', 'a', 'r', 0};
+	uint8_t in[] = {'f', 'o', 'o', 0, 'b', 'a', 'r', 0};
 	huffman_encode_bytes(output, enc, sizeof(in), in);
 	int len = baos_count(output);
 	uint8_t *out = baos_to_array(output);
@@ -77,7 +77,7 @@ START_TEST(test_encode_decode)
 	struct baos *result_buff = baos_new();
 	huffman_canonical_decode(&dec, out, 0, len, result_buff);
 	int result_len = baos_count(result_buff);
-	char *result = baos_to_array(result_buff);
+	uint8_t *result = baos_to_array(result_buff);
 
 	for (int i = 0; i < sizeof(in) / sizeof(in[0]); ++i) {
 		ck_assert_msg(result[i] == in[i],

@@ -91,7 +91,7 @@ END_TEST
 
 START_TEST(test_encode_basic)
 {
-	uint8_t *strings[] = {"foo", "bar", "baz"};
+	char *strings[] = {"foo", "bar", "baz"};
 	struct bytes *b = hfc_compress(3, strings);
 
 	struct hfc *hfc = hfc_new(b->bytes, b->len);
@@ -108,7 +108,7 @@ END_TEST
 
 START_TEST(test_empty)
 {
-	uint8_t *strings[] = {};
+	char *strings[] = {};
 	struct bytes *b = hfc_compress(0, strings);
 	struct hfc *hfc = hfc_new(b->bytes, b->len);
 	ck_assert_int_eq(hfc_count(hfc), 0);
@@ -122,7 +122,7 @@ END_TEST
 
 START_TEST(test_one)
 {
-	uint8_t *strings[] = {"foo"};
+	char *strings[] = {"foo"};
 	struct bytes *b = hfc_compress(1, strings);
 	struct hfc *hfc = hfc_new(b->bytes, b->len);
 	ck_assert_int_eq(hfc_count(hfc), 1);
@@ -137,11 +137,11 @@ END_TEST
 
 START_TEST(test_merge)
 {
-	uint8_t *strings0[] = {"foo", "bar", "baz"};
+	char *strings0[] = {"foo", "bar", "baz"};
 	struct bytes *b0 = hfc_compress(3, strings0);
 	struct hfc *hfc0 = hfc_new(b0->bytes, b0->len);
 
-	uint8_t *strings1[] = {"foo", "bin", "baz"};
+	char *strings1[] = {"foo", "bin", "baz"};
 	struct bytes *b1 = hfc_compress(3, strings1);
 	struct hfc *hfc1 = hfc_new(b1->bytes, b1->len);
 
@@ -164,7 +164,7 @@ END_TEST
 
 START_TEST(test_filter)
 {
-	uint8_t *strings0[] = {"one", "two", "three", "four", "five", "six", "seven", "eight"};
+	char *strings0[] = {"one", "two", "three", "four", "five", "six", "seven", "eight"};
 
 	struct bytes *b0 = hfc_compress(8, strings0);
 	hfc_set(b0->bytes, b0->len);
@@ -186,7 +186,7 @@ END_TEST
 
 START_TEST(test_lookup)
 {
-	uint8_t *strings0[] = {"one", "two", "three", "four", "five", "six", "seven", "eight"};
+	char *strings0[] = {"one", "two", "three", "four", "five", "six", "seven", "eight"};
 
 	struct bytes *b0 = hfc_compress(8, strings0);
 	hfc_set(b0->bytes, b0->len);
@@ -219,15 +219,17 @@ START_TEST(test_singleton)
 	hfc_set_empty();
 	ck_assert_int_eq(hfc_length(), 0);
 
-	uint8_t *strings0[] = {"foo", "bar", "baz"};
+	char *strings0[] = {"foo", "bar", "baz"};
 	struct bytes *b0 = hfc_compress(3, strings0);
 	hfc_merge(b0->bytes, b0->len);
 	ck_assert_int_eq(hfc_length(), 3);
 
-	uint8_t *strings1[] = {"foo", "bin", "baz"};
+	char *strings1[] = {"foo", "bin", "baz"};
 	struct bytes *b1 = hfc_compress(3, strings1);
 	hfc_merge(b1->bytes, b1->len);
 	ck_assert_int_eq(hfc_length(), 4);
+	free(b0);
+	free(b1);
 }
 END_TEST
 

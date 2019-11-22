@@ -27,10 +27,10 @@ static void vbyte_encode(struct baos *out, long i) {
 	}
 }
 
-static int common_prefix(uint8_t *a, uint8_t *b) {
+static int common_prefix(const char *a, const char *b) {
 	int n = 0;
-	int lena = strlen((const char *)a);
-	int lenb = strlen((const char *)b);
+	int lena = strlen(a);
+	int lenb = strlen(b);
 	int mlen = lena < lenb ? lena : lenb;
 	while (mlen > n && a[n] == b[n]) {
 		++n;
@@ -38,16 +38,16 @@ static int common_prefix(uint8_t *a, uint8_t *b) {
 	return n;
 }
 
-static void diff_rec(struct baos *out, uint8_t *a, uint8_t *b) {
+static void diff_rec(struct baos *out, const char *a, const char *b) {
 	int n = common_prefix(a, b);
 	vbyte_encode(out, n);
-	baos_copy(out, (uint8_t *)b + n, strlen((const char *)b) - n + 1);
+	baos_copy(out, (uint8_t *)b + n, strlen(b) - n + 1);
 }
 
-static struct bytes *compute_inner(int count, uint8_t **strings) {
+static struct bytes *compute_inner(int count, char **strings) {
 	struct baos *out = baos_new();
 	int i = 0;
-	baos_copy(out, strings[0], strlen((const char *)strings[0]) + 1);
+	baos_copy(out, (uint8_t *)strings[0], strlen((const char *)strings[0]) + 1);
 	count--;
 	while (i < count) {
 		diff_rec(out, strings[i], strings[i + 1]);
@@ -71,7 +71,7 @@ static uint32_t *compute_offsets(int count, struct bytes **bins) {
 	return offsets;
 }
 
-struct bytes *hfc_compress_sorted(int count, uint8_t **strings) {
+struct bytes *hfc_compress_sorted(int count, char **strings) {
 	// build front-coded bins
 	int bin_count = (count + BINSIZE - 1)  / BINSIZE;
 	struct bytes **bins = malloc(sizeof(struct bytes *) * bin_count);
@@ -126,8 +126,8 @@ static int cmpstr(const void *a, const void *b) {
 }
 
 // XXX modifies strings
-struct bytes *hfc_compress(int count, uint8_t **strings) {
-	qsort(strings, count, sizeof(uint8_t *), cmpstr);
+struct bytes *hfc_compress(int count, char **strings) {
+	qsort(strings, count, sizeof(char *), cmpstr);
 	return hfc_compress_sorted(count, strings);
 }
 
@@ -387,7 +387,7 @@ struct hfc *hfc_merge_two(struct hfc *ha, struct hfc *hb) {
 		add_dup(out, bb);
 		bb = hfc_iter_next(ib);
 	}
-	struct bytes *buff = hfc_compress(out->length, (uint8_t **)out->arr);
+	struct bytes *buff = hfc_compress(out->length, out->arr);
 	struct hfc *hfc = hfc_new(buff->bytes, buff->len);
 	clear_array(out);
 	free(buff);
@@ -493,7 +493,7 @@ void hfc_filter() {
 		// during this loop.
 		array_add(out, strdup(hfc_lookup(hfc_cache_result.matches[i])));
 	}
-	struct bytes *buff = hfc_compress(out->length, (uint8_t **)out->arr);
+	struct bytes *buff = hfc_compress(out->length, out->arr);
 	clear_array(out);
 	hfc_set(buff->bytes, buff->len);
 	free(buff);

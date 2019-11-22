@@ -20,7 +20,7 @@ struct hfc_iter *hfc_iter_init(struct hfc *hfc);
 char *hfc_iter_next(struct hfc_iter *iter);
 void hfc_iter_free(struct hfc_iter *iter);
 
-struct bytes *hfc_compress(int count, uint8_t **strings);
+struct bytes *hfc_compress(int count, char **strings);
 struct hfc *hfc_merge_two(struct hfc *ha, struct hfc *hb);
 
 // js API
