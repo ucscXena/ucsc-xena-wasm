@@ -26,7 +26,7 @@ START_TEST(test_empty)
 	len = baos_count(baos);
 	result = baos_to_array(baos);
 	ck_assert_int_eq(len, 0);
-	ck_assert_ptr_eq(result, NULL);
+	ck_assert_ptr_null(result);
 	free(result);
 }
 END_TEST
