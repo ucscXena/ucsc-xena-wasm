@@ -276,12 +276,26 @@ void hfc_search_method(struct hfc *hfc, int (*cmp)(const char *, const char *), 
 	struct baos *out = baos_new();
 	struct inner inner;
 	int i;
-	for (i = 0; i < hfc->bin_count - 1; ++i) {
+	if (hfc->length) {
+		for (i = 0; i < hfc->bin_count - 1; ++i) {
+			uncompress_bin(hfc, i, &inner, ignore_case);
+			if (cmp(inner.current, substring)) {
+				baos_push_int(out, i * hfc->bin_size);
+			}
+			for (int j = 1; j < hfc->bin_size; ++j) {
+				inner_next(&inner);
+				if (cmp(inner.current, substring)) {
+					baos_push_int(out, i * hfc->bin_size + j);
+				}
+			}
+			free(inner.buff); // XXX this API is a bit wonky
+		}
 		uncompress_bin(hfc, i, &inner, ignore_case);
 		if (cmp(inner.current, substring)) {
 			baos_push_int(out, i * hfc->bin_size);
 		}
-		for (int j = 1; j < hfc->bin_size; ++j) {
+		int last = (hfc->length % hfc->bin_size) ? (hfc->length % hfc->bin_size) : hfc->bin_size;
+		for (int j = 1; j < last; ++j) {
 			inner_next(&inner);
 			if (cmp(inner.current, substring)) {
 				baos_push_int(out, i * hfc->bin_size + j);
@@ -289,17 +303,6 @@ void hfc_search_method(struct hfc *hfc, int (*cmp)(const char *, const char *), 
 		}
 		free(inner.buff); // XXX this API is a bit wonky
 	}
-	uncompress_bin(hfc, i, &inner, ignore_case);
-	if (cmp(inner.current, substring)) {
-		baos_push_int(out, i * hfc->bin_size);
-	}
-	for (int j = 1; j < hfc->length % hfc->bin_size; ++j) {
-		inner_next(&inner);
-		if (cmp(inner.current, substring)) {
-			baos_push_int(out, i * hfc->bin_size + j);
-		}
-	}
-	free(inner.buff); // XXX this API is a bit wonky
 	result->count = baos_count(out) / 4;
 	result->matches = (uint32_t *)baos_to_array(out);
 }
