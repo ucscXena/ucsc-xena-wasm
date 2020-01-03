@@ -452,6 +452,10 @@ struct search_result *hfc_search(char *substring, enum search_type type) {
 			substring[i] = tolower(substring[i]);
 		}
 	}
+	if (hfc_cache_result.matches) {
+		free(hfc_cache_result.matches);
+		hfc_cache_result.matches = NULL;
+	}
 	hfc_search_method(hfc_cache,
 		type == EXACT ? exact : contains,
 		type == EXACT ? 0 : 1,
