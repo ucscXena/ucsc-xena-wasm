@@ -170,8 +170,8 @@ START_TEST(test_filter)
 	hfc_set(b0->bytes, b0->len);
 	free(b0);
 	char *x = strdup("i");
-	hfc_search(x, CONTAINS);
-	hfc_filter();
+	struct search_result *result = hfc_search(x, CONTAINS);
+	hfc_filter(result->matches, result->count);
 	struct hfc_iter *it = hfc_iter_init(hfc_get_cache());
 	// sorted: eight five four one seven six three two
 	// matches: 0, 1, 5
@@ -181,6 +181,36 @@ START_TEST(test_filter)
 	hfc_iter_free(it);
 	free(x);
 	hfc_clear_cache();
+}
+END_TEST
+
+START_TEST(test_larger_filter)
+{
+	int count = 512;
+	char *strings0[count];
+	for (int i = 0; i < count; ++i) {
+		strings0[i] = malloc(4);
+		sprintf(strings0[i], "%d", i);
+	}
+
+	struct bytes *b0 = hfc_compress(count, strings0);
+	hfc_set(b0->bytes, b0->len);
+	free(b0);
+	char *x = strdup("78");
+	struct search_result *result = hfc_search(x, CONTAINS);
+	hfc_filter(result->matches, result->count);
+	struct hfc_iter *it = hfc_iter_init(hfc_get_cache());
+	ck_assert_str_eq(hfc_iter_next(it), "178");
+	ck_assert_str_eq(hfc_iter_next(it), "278");
+	ck_assert_str_eq(hfc_iter_next(it), "378");
+	ck_assert_str_eq(hfc_iter_next(it), "478");
+	ck_assert_str_eq(hfc_iter_next(it), "78");
+	hfc_iter_free(it);
+	free(x);
+	hfc_clear_cache();
+	for (int i = 0; i < count; ++i) {
+		free(strings0[i]);
+	}
 }
 END_TEST
 
@@ -241,6 +271,7 @@ void add_hfc(TCase *tc) {
 	tcase_add_test(tc, test_one);
 	tcase_add_test(tc, test_merge);
 	tcase_add_test(tc, test_filter);
+	tcase_add_test(tc, test_larger_filter);
 	tcase_add_test(tc, test_lookup);
 	tcase_add_test(tc, test_set_empty);
 	tcase_add_test(tc, test_singleton);

@@ -492,19 +492,19 @@ char *hfc_lookup(uint32_t i) {
 	return inner_cache->arr[i % hfc_cache->bin_size];
 }
 
-// apply search results as a filter
-void hfc_filter() {
+void hfc_filter(uint32_t *list, uint32_t count) {
 	struct array *out = array_new();
-	for (int i = 0; i < hfc_cache_result.count; ++i) {
+	for (uint32_t i = 0; i < count; ++i) {
 		// have to copy out of cache, since cache will be invalidated
 		// during this loop.
-		array_add(out, strdup(hfc_lookup(hfc_cache_result.matches[i])));
+		array_add(out, strdup(hfc_lookup(list[i])));
 	}
 	struct bytes *buff = hfc_compress(out->length, out->arr);
 	clear_array(out);
 	hfc_set(buff->bytes, buff->len);
 	free(buff);
 }
+
 struct hfc *hfc_get_cache() {
 	return hfc_cache;
 }

@@ -29,7 +29,7 @@ void hfc_set_empty();
 void hfc_merge(uint8_t *buff, uint32_t len);
 char *hfc_lookup(uint32_t i);
 struct search_result *hfc_search(char *substring, enum search_type type);
-void hfc_filter();
+void hfc_filter(uint32_t *list, uint32_t count);
 struct hfc *hfc_get_cache();
 void hfc_clear_cache(); // inner cache only
 int hfc_length();
