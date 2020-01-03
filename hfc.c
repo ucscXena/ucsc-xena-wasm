@@ -71,7 +71,7 @@ static uint32_t *compute_offsets(int count, struct bytes **bins) {
 	return offsets;
 }
 
-struct bytes *hfc_compress_sorted(int count, char **strings) {
+struct bytes *hfc_compress_sorted(uint32_t count, char **strings) {
 	// build front-coded bins
 	int bin_count = (count + BINSIZE - 1)  / BINSIZE;
 	struct bytes **bins = malloc(sizeof(struct bytes *) * bin_count);
@@ -126,7 +126,7 @@ static int cmpstr(const void *a, const void *b) {
 }
 
 // XXX modifies strings
-struct bytes *hfc_compress(int count, char **strings) {
+struct bytes *hfc_compress(uint32_t count, char **strings) {
 	qsort(strings, count, sizeof(char *), cmpstr);
 	return hfc_compress_sorted(count, strings);
 }
@@ -463,7 +463,7 @@ void hfc_merge(uint8_t *buff, uint32_t len) {
 	hfc_free(hfc);
 }
 
-char *hfc_lookup(int i) {
+char *hfc_lookup(uint32_t i) {
 	int bin = i / hfc_cache->bin_size;
 	if (bin != inner_bin) {
 		clear_array(inner_cache);
