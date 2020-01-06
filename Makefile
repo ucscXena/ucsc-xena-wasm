@@ -90,7 +90,7 @@ build-linux build-wasm:
 
 .PHONY: all-linux all-wasm
 
-all-linux: test
+all-linux: test hfcz
 
 all-wasm: test.js xena.js
 

@@ -48,12 +48,12 @@ static int compress(const char *filename) {
 			lines++;
 		}
 	}
-	uint8_t **strs = malloc(sizeof(char *) * lines);
+	char **strs = malloc(sizeof(char *) * lines);
 	if (strs == NULL) {
 		return -1;
 	}
 	uint8_t *c = buff;
-	uint8_t **s = strs;
+	char **s = strs;
 	for (int i = 0; i < size; ++i) {
 		if (buff[i] == '\n') {
 			*s = c;
