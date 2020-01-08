@@ -106,7 +106,6 @@ static int decompress(char *filename) {
 
 	hfc_iter_free(iter);
 	hfc_free(hfc);
-	free(buff);
 	return 0;
 }
 
