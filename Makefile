@@ -43,14 +43,14 @@ CHECK_TGZ := check-$(CHECK_RELEASE).tar.gz
 CHECK_LD_PATH := check-build/src/.libs
 
 check-0.13.0:
-	wget https://github.com/libcheck/check/releases/download/$(CHECK_RELEASE)/$(CHECK_TGZ) >  $(CHECK_TGZ)
+	wget https://github.com/libcheck/check/releases/download/$(CHECK_RELEASE)/$(CHECK_TGZ)
 	tar zxf $(CHECK_TGZ)
 
 check-build/Makefile: | ../check-$(CHECK_RELEASE)
 	mkdir -p check-build
-	cd check-build && ../../check-$(CHECK_RELEASE)/configure
+	cd check-build && ../../check-$(CHECK_RELEASE)/configure --enable-shared=false
 
-$(CHECK_LD_PATH)/libcheck.so: | check-build/Makefile
+$(CHECK_LD_PATH)/libcheck.a: | check-build/Makefile
 	# clear MAKEOVERRIDES so the check build doesn't pick up
 	# xena stuff, like VPATH.
 	cd check-build && $(MAKE) MAKEOVERRIDES=
@@ -104,10 +104,10 @@ bench: $(bench_objects)
 
 TESTOBJ=test.o test_baos.o baos.o test_queue.o queue.o test_stats.o stats.o fradix16.o test_huffman.o huffman.o test_htfc.o htfc.o test_hfc.o hfc.o bytes.o array.o
 
-test: $(CHECK_LD_PATH)/libcheck.so $(TESTOBJ)
-		LD_RUN_PATH=$(CURDIR)/$(CHECK_LD_PATH) $(CC) $(CFLAGS) -o $@ $^ -L$(CHECK_LD_PATH) -lcheck -lm -lrt # -lpthread -lsubunit
+test: $(CHECK_LD_PATH)/libcheck.a $(TESTOBJ)
+		LD_RUN_PATH=$(CURDIR)/$(CHECK_LD_PATH) $(CC) $(CFLAGS) -o $@ $^ -L$(CHECK_LD_PATH) -lcheck -lm -lrt -lpthread
 
-test.js: $(CHECK_LD_PATH)/libcheck.so $(TESTOBJ)
+test.js: $(CHECK_LD_PATH)/libcheck.a $(TESTOBJ)
 	$(CC) $(CFLAGS) -o $@ $^ -L$(CHECK_LD_PATH) -lcheck -s ALLOW_MEMORY_GROWTH=1 --embed-file ../data
 
 RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue", "UTF8ToString"]'
