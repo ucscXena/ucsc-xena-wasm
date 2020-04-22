@@ -1,6 +1,6 @@
 {
   "name": "ucsc-xena-wasm",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "wasm methods for ucsc-xena",
   "main": "build-wasm/xena.js",
   "files": [
