@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) {
 	TEST(huffman);
 	TEST(htfc);
 	TEST(hfc);
+	TEST(sort);
 
 	SRunner *sr = srunner_create(s);
 //	srunner_set_fork_status(sr, CK_NOFORK);

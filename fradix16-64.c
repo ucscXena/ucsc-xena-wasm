@@ -56,7 +56,7 @@ static void zero(int *a, int n) {
 // column. If the size is prohibitive, consider more passes:
 // cached histo + more passes might be faster than computing histo &
 // fewer passes. Maybe look at some profiles to see how it breaks down.
-static void computeHisto(uint32_t *vals, int n) {
+static void computeHisto(uint32_t *vals, int n, direction dir) {
 	zero(offset0, offsetSize);
 	zero(offset1, offsetSize);
 	for (int i = 0; i < n; ++i) {
@@ -64,9 +64,16 @@ static void computeHisto(uint32_t *vals, int n) {
 		offset0[part0(flopped)]++;
 		offset1[part1(flopped)]++;
 	}
-	for (int i = 1; i < offsetSize; i++) {
-		offset0[i] += offset0[i - 1];
-		offset1[i] += offset1[i - 1];
+	if (dir == UP) {
+		for (int i = 1; i < offsetSize; i++) {
+			offset0[i] += offset0[i - 1];
+			offset1[i] += offset1[i - 1];
+		}
+	} else {
+		for (int i = offsetSize - 2; i >= 0; i--) {
+			offset0[i] += offset0[i + 1];
+			offset1[i] += offset1[i + 1];
+		}
 	}
 }
 
@@ -121,9 +128,10 @@ void nans(uint32_t *vals, int *indicies, int n) {
 }
 #endif
 
-void fradixSort16_64(uint32_t *vals, int n, int *indicies, uint64_t *scratch) {
+void fradixSort16_64(uint32_t *vals, int n, int *indicies, uint64_t *scratch,
+		direction dir) {
 
-	computeHisto(vals, n);
+	computeHisto(vals, n, dir);
 
 	for (int i = n - 1; i >= 0; i--) {
 		int ii = indicies[i];
@@ -145,16 +153,22 @@ void fradixSort16_64(uint32_t *vals, int n, int *indicies, uint64_t *scratch) {
 #endif
 }
 
-void fradixSortL16_64(uint32_t **valsList, int m, int n, int *indicies) {
+void fradixSortL16_64(uint32_t **valsList, direction *dirs, int m, int n, int *indicies) {
 	uint64_t *scratch = malloc(n * sizeof(uint64_t));
 	while (m) {
-		fradixSort16_64(valsList[--m], n, indicies, scratch);
+		int i = --m;
+		fradixSort16_64(valsList[i], n, indicies, scratch, dirs[i]);
 	}
 	free(scratch);
 }
 
+static int initialized = 0;
+
 // set up working space.
 void fradixSort16_64_init() {
-	offset0 = malloc(offsetSize * sizeof(int));
-	offset1 = malloc(offsetSize * sizeof(int));
+	if (!initialized) {
+		offset0 = malloc(offsetSize * sizeof(int));
+		offset1 = malloc(offsetSize * sizeof(int));
+		initialized = 1;
+	}
 }

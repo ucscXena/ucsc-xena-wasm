@@ -14,7 +14,8 @@ CHECKFLAGS=-Icheck-build -Icheck-build/src
 #
 SRCS= baos.c bench.c color_scales.c fradix16-64.c fradix16.c fradix.c heatmap.c \
 	hfc.c htfc.c hfcz.c htfcz.c huffman.c queue.c radix.c roaring.c roaring_test.c stats.c array.c \
-	bytes.c test_baos.c test_hfc.c test_htfc.c test_huffman.c test_queue.c test_stats.c test.c
+	bytes.c test_baos.c test_hfc.c test_htfc.c test_huffman.c test_queue.c test_stats.c test.c \
+	test_sort.c
 
 DEPDIR := .deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
@@ -102,7 +103,7 @@ bench_objects=radix.o fradix.o fradix16.o fradix16-64.o bench.o
 
 bench: $(bench_objects)
 
-TESTOBJ=test.o test_baos.o baos.o test_queue.o queue.o test_stats.o stats.o fradix16.o test_huffman.o huffman.o test_htfc.o htfc.o test_hfc.o hfc.o bytes.o array.o
+TESTOBJ=test.o test_baos.o baos.o test_queue.o queue.o test_stats.o stats.o fradix16.o test_huffman.o huffman.o test_htfc.o htfc.o test_hfc.o hfc.o bytes.o array.o test_sort.o fradix16-64.o
 
 test: $(CHECK_LD_PATH)/libcheck.a $(TESTOBJ)
 		LD_RUN_PATH=$(CURDIR)/$(CHECK_LD_PATH) $(CC) $(CFLAGS) -o $@ $^ -L$(CHECK_LD_PATH) -lcheck -lm -lrt -lpthread
@@ -114,7 +115,7 @@ RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getV
 EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian","_get_color_linear","_get_color_log2","_region_color_linear_test","_draw_subcolumn","_tally_domains","_test_scale_method","_hfc_search","_hfc_set","_hfc_set_empty","_hfc_merge","_hfc_filter","_hfc_lookup","_hfc_length","_hfc_buff_length","_hfc_buff"]'
 SORTFLAGS=-s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 --pre-js ../wrappers.js --pre-js wasm_struct.js
 
-wasm_struct.js: heatmap_struct.probe color_scales_struct.probe htfc_struct.probe hfc_struct.probe
+wasm_struct.js: heatmap_struct.probe color_scales_struct.probe htfc_struct.probe hfc_struct.probe fradix16-64_struct.probe
 	../idlToJSON.js $@ $^
 
 htfcz: htfcz.o htfc.o baos.o huffman.o queue.o
