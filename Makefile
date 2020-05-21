@@ -111,11 +111,11 @@ test: $(CHECK_LD_PATH)/libcheck.a $(TESTOBJ)
 test.js: $(CHECK_LD_PATH)/libcheck.a $(TESTOBJ)
 	$(CC) $(CFLAGS) -o $@ $^ -L$(CHECK_LD_PATH) -lcheck -s ALLOW_MEMORY_GROWTH=1 --embed-file ../data
 
-RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue", "UTF8ToString"]'
-EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian","_get_color_linear","_get_color_log2","_region_color_linear_test","_draw_subcolumn","_tally_domains","_test_scale_method","_hfc_search","_hfc_set","_hfc_set_empty","_hfc_merge","_hfc_filter","_hfc_lookup","_hfc_length","_hfc_buff_length","_hfc_buff"]'
+RTEXPORT=-s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "setValue", "getValue", "UTF8ToString", "writeAsciiToMemory"]'
+EXPORT=-s EXPORTED_FUNCTIONS='["_fradixSort16_64","_fradixSort16_64_init","_fradixSortL16_64","_fradixSort16_init","_malloc","_free","_faminmax","_faminmax_init","_fameanmedian_init","_fameanmedian","_get_color_linear","_get_color_log2","_region_color_linear_test","_draw_subcolumn","_tally_domains","_test_scale_method","_hfc_search","_hfc_set","_hfc_set_empty","_hfc_merge","_hfc_filter","_hfc_lookup","_hfc_length","_hfc_buff_length","_hfc_buff","_hfc_compress"]'
 SORTFLAGS=-s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 --pre-js ../wrappers.js --pre-js wasm_struct.js
 
-wasm_struct.js: heatmap_struct.probe color_scales_struct.probe htfc_struct.probe hfc_struct.probe fradix16-64_struct.probe
+wasm_struct.js: heatmap_struct.probe color_scales_struct.probe htfc_struct.probe hfc_struct.probe fradix16-64_struct.probe bytes_struct.probe
 	../idlToJSON.js $@ $^
 
 htfcz: htfcz.o htfc.o baos.o huffman.o queue.o

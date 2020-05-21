@@ -3,10 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-struct bytes {
-	size_t len;
-	uint8_t *bytes;
-};
+#include "bytes_struct.h"
 
 struct bytes *bytes_new(size_t len, uint8_t *bytes);
 void bytes_free(struct bytes *b);
