@@ -46,9 +46,9 @@ uint32_t get_color_log2(ctx ctx, double v) {
 	if (v > s->domain[1]) {
 		return s->range[1];
 	}
-	int r = round(s->m[0] * log2(v) + s->b[0]);
-	int g = round(s->m[1] * log2(v) + s->b[1]);
-	int b = round(s->m[2] * log2(v) + s->b[2]);
+	int r = round(s->m[0] * log2(v + 1.0) + s->b[0]);
+	int g = round(s->m[1] * log2(v + 1.0) + s->b[1]);
+	int b = round(s->m[2] * log2(v + 1.0) + s->b[2]);
 	return RGB(r, g, b);
 }
 
