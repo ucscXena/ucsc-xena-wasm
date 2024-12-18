@@ -1,0 +1,12 @@
+'use strict';
+
+module.exports = {
+	struct: {
+	},
+	enum: {
+		stat: ['MIN', 'MAX', 'MEAN', 'MEDIAN', 'SD', 'P01', 'P99', 'P05',
+			'P95', 'P10', 'P90', 'P25', 'P75', 'P33', 'P66', 'LAST']
+	},
+	includes: []
+};
+
